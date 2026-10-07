@@ -16,6 +16,7 @@ import com.maya.fashionassistant.repository.OutfitRepository;
 import com.maya.fashionassistant.repository.WardrobeItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -60,6 +61,8 @@ public class StylingService {
     private final ImageStorageService imageStorageService;
     private final ChatAiClient chatAiClient;
     private final ImageGenerationClient imageGenerationClient;
+    private final OutfitVisualizationService outfitVisualizationService;
+    private final String visualizationMode;
 
     public StylingService(
             WardrobeItemRepository wardrobeItemRepository,
@@ -70,7 +73,9 @@ public class StylingService {
             WeatherService weatherService,
             ImageStorageService imageStorageService,
             ChatAiClient chatAiClient,
-            ImageGenerationClient imageGenerationClient) {
+            ImageGenerationClient imageGenerationClient,
+            OutfitVisualizationService outfitVisualizationService,
+            @Value("${maya.visualization.mode:COMPOSITE}") String visualizationMode) {
         this.wardrobeItemRepository = wardrobeItemRepository;
         this.outfitRepository = outfitRepository;
         this.conversationService = conversationService;
@@ -80,6 +85,8 @@ public class StylingService {
         this.imageStorageService = imageStorageService;
         this.chatAiClient = chatAiClient;
         this.imageGenerationClient = imageGenerationClient;
+        this.outfitVisualizationService = outfitVisualizationService;
+        this.visualizationMode = visualizationMode;
     }
 
     public ChatReplyResponse handleMessage(Long userId, Long conversationId, String message,
@@ -372,20 +379,55 @@ public class StylingService {
         return "Soft, natural waves with a middle part";
     }
 
+    /**
+     * Builds the outfit visualization. By default this is a deterministic "look board"
+     * composed from the user's ACTUAL wardrobe item images — never an AI-invented picture.
+     * Set {@code maya.visualization.mode=AI} to use the configured image-generation provider.
+     */
     private String generateVisualization(OutfitSelectionResponse selection, String hairstyle,
                                          StylingIntent intent, WeatherInfo weather, List<WardrobeItem> wardrobe) {
         try {
-            String prompt = buildImagePrompt(selection, hairstyle, intent, weather, wardrobe);
-            byte[] imageBytes = imageGenerationClient.generateImage(prompt);
-            if (imageBytes == null || imageBytes.length == 0) {
-                return null;
+            if ("AI".equalsIgnoreCase(visualizationMode)) {
+                return generateAiVisualization(selection, hairstyle, intent, weather, wardrobe);
             }
-            String filename = "outfit." + detectImageExtension(imageBytes);
-            return imageStorageService.store(new ByteArrayInputStream(imageBytes), filename, "outfits");
+            return generateCompositeVisualization(selection, wardrobe);
         } catch (Exception e) {
             log.warn("Outfit visualization skipped: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String generateCompositeVisualization(OutfitSelectionResponse selection, List<WardrobeItem> wardrobe) {
+        Map<Long, WardrobeItem> byId = wardrobe.stream()
+                .collect(Collectors.toMap(WardrobeItem::getId, item -> item));
+
+        List<OutfitVisualizationService.Piece> pieces = selection.getItems().stream()
+                .map(item -> {
+                    WardrobeItem wardrobeItem = byId.get(item.getWardrobeItemId());
+                    if (wardrobeItem == null || wardrobeItem.getImagePath() == null) {
+                        return null;
+                    }
+                    return new OutfitVisualizationService.Piece(wardrobeItem.getImagePath(), item.getRole());
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+
+        byte[] board = outfitVisualizationService.composeBoard(pieces);
+        if (board == null || board.length == 0) {
+            return null;
+        }
+        return imageStorageService.store(new ByteArrayInputStream(board), "lookboard.png", "outfits");
+    }
+
+    private String generateAiVisualization(OutfitSelectionResponse selection, String hairstyle,
+                                           StylingIntent intent, WeatherInfo weather, List<WardrobeItem> wardrobe) {
+        String prompt = buildImagePrompt(selection, hairstyle, intent, weather, wardrobe);
+        byte[] imageBytes = imageGenerationClient.generateImage(prompt);
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        String filename = "outfit." + detectImageExtension(imageBytes);
+        return imageStorageService.store(new ByteArrayInputStream(imageBytes), filename, "outfits");
     }
 
     /**

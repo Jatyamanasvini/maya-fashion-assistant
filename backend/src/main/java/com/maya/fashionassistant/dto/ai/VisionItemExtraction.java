@@ -4,11 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.maya.fashionassistant.entity.ItemCategory;
 
+import java.util.List;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VisionItemExtraction {
 
     @JsonDeserialize(using = ItemCategoryDeserializer.class)
     private ItemCategory category;
+    private List<Double> bbox; // normalized [x1,y1,x2,y2] fractions of image width/height
     private String subcategory;
     private String description;
     private String color;
@@ -126,5 +129,13 @@ public class VisionItemExtraction {
 
     public void setSeason(String season) {
         this.season = season;
+    }
+
+    public List<Double> getBbox() {
+        return bbox;
+    }
+
+    public void setBbox(List<Double> bbox) {
+        this.bbox = bbox;
     }
 }

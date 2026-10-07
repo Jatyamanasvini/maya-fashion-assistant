@@ -84,6 +84,17 @@ Ran the real application (not tests) against MySQL with the `ollama` profile and
 
 **Result:** full stack verified end-to-end against real MySQL and real (free) AI.
 
+### [Feature change] Real-clothes look board + per-item isolation on white
+Two product requirements from the user:
+1. The outfit visualization must be composed from the user's **actual** clothes — not an AI-invented picture.
+2. Each extracted item must be shown alone on a **plain white background**.
+
+Implemented:
+- **`OutfitVisualizationService`** — renders the outfit as a white "look board" composited (Java2D) from the selected wardrobe item images. AI generation is retained but off by default (`maya.visualization.mode=AI` re-enables it).
+- **`ItemImageService`** + **`scripts/crop_item.py`** — the vision model returns normalized bounding boxes; each garment is cropped and passed through a local **OpenCV GrabCut** segmentation, then centered on white. Runs via local `python3.11` + `opencv-python-headless`; falls back to the original photo if unavailable.
+
+**Honest quality caveat:** classical GrabCut is strong for high-contrast items (denim came out clean) but weak for low-contrast ones (white sneakers on a light floor), and the bounding box comes from the small local vision model, which is approximate. When the cutout is unreliable the pipeline falls back to the item's cropped region. A learned segmentation model (U2Net/SAM) would improve this.
+
 ---
 
 ## How to run

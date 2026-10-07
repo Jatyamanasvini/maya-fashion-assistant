@@ -15,6 +15,7 @@ import com.maya.fashionassistant.service.ConversationService;
 import com.maya.fashionassistant.service.ImageStorageService;
 import com.maya.fashionassistant.service.IntentExtractor;
 import com.maya.fashionassistant.service.OutfitService;
+import com.maya.fashionassistant.service.OutfitVisualizationService;
 import com.maya.fashionassistant.service.StylingService;
 import com.maya.fashionassistant.service.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,8 @@ class StylingServiceTest {
     private ChatAiClient chatAiClient;
     @Mock
     private ImageGenerationClient imageGenerationClient;
+    @Mock
+    private OutfitVisualizationService outfitVisualizationService;
 
     private StylingService stylingService;
 
@@ -61,7 +64,8 @@ class StylingServiceTest {
     void setUp() {
         stylingService = new StylingService(
                 wardrobeItemRepository, outfitRepository, conversationService, outfitService,
-                intentExtractor, weatherService, imageStorageService, chatAiClient, imageGenerationClient);
+                intentExtractor, weatherService, imageStorageService, chatAiClient,
+                imageGenerationClient, outfitVisualizationService, "COMPOSITE");
     }
 
     private WardrobeItem item(Long id, ItemCategory category, String desc) {
@@ -89,7 +93,6 @@ class StylingServiceTest {
         when(intentExtractor.extract(any())).thenReturn(new com.maya.fashionassistant.service.StylingIntent());
         when(outfitRepository.findFirstByConversationIdOrderByCreatedAtDesc(10L)).thenReturn(Optional.empty());
         when(weatherService.getWeather(null, null)).thenReturn(null);
-        when(imageGenerationClient.generateImage(any())).thenReturn(null);
 
         // AI returns a FOREIGN item id (999) not owned by the user
         OutfitSelectionResponse aiResponse = new OutfitSelectionResponse(
@@ -155,7 +158,6 @@ class StylingServiceTest {
         when(outfitRepository.findFirstByConversationIdOrderByCreatedAtDesc(10L)).thenReturn(Optional.empty());
         when(weatherService.getWeather(null, null)).thenReturn(null);
         when(chatAiClient.selectOutfit(anyList(), any(), anyList())).thenReturn(null); // force deterministic
-        when(imageGenerationClient.generateImage(any())).thenReturn(null);
 
         when(outfitService.createOutfit(eq(1L), eq(10L), any(), any(), anyList(), any()))
                 .thenAnswer(invocation -> {

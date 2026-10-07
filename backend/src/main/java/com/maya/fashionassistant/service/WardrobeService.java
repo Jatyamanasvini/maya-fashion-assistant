@@ -35,16 +35,19 @@ public class WardrobeService {
     private final WardrobeSourceRepository wardrobeSourceRepository;
     private final ImageStorageService imageStorageService;
     private final VisionAiClient visionAiClient;
+    private final ItemImageService itemImageService;
 
     public WardrobeService(
             WardrobeItemRepository wardrobeItemRepository,
             WardrobeSourceRepository wardrobeSourceRepository,
             ImageStorageService imageStorageService,
-            VisionAiClient visionAiClient) {
+            VisionAiClient visionAiClient,
+            ItemImageService itemImageService) {
         this.wardrobeItemRepository = wardrobeItemRepository;
         this.wardrobeSourceRepository = wardrobeSourceRepository;
         this.imageStorageService = imageStorageService;
         this.visionAiClient = visionAiClient;
+        this.itemImageService = itemImageService;
     }
 
     @Transactional
@@ -72,6 +75,15 @@ public class WardrobeService {
         if (analysisResponse != null && analysisResponse.getItems() != null) {
             for (VisionItemExtraction extracted : analysisResponse.getItems()) {
                 if (isValidExtraction(extracted)) {
+                    // Isolate this item on a white background when a location was provided.
+                    String itemImagePath = originalPath;
+                    if (extracted.getBbox() != null) {
+                        String isolated = itemImageService.createItemImage(originalPath, extracted.getBbox());
+                        if (isolated != null) {
+                            itemImagePath = isolated;
+                        }
+                    }
+
                     WardrobeItem item = new WardrobeItem(
                             userId,
                             savedSource.getId(),
@@ -86,7 +98,7 @@ public class WardrobeService {
                             cleanString(extracted.getFit(), 50),
                             cleanString(extracted.getFormality(), 50),
                             cleanString(extracted.getSeason(), 50),
-                            originalPath // Links to source image reference
+                            itemImagePath
                     );
                     savedItems.add(wardrobeItemRepository.save(item));
                 } else {

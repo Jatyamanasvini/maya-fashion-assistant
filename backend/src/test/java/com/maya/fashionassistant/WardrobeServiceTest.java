@@ -13,6 +13,7 @@ import com.maya.fashionassistant.exception.ResourceNotFoundException;
 import com.maya.fashionassistant.repository.WardrobeItemRepository;
 import com.maya.fashionassistant.repository.WardrobeSourceRepository;
 import com.maya.fashionassistant.service.ImageStorageService;
+import com.maya.fashionassistant.service.ItemImageService;
 import com.maya.fashionassistant.service.WardrobeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,9 @@ class WardrobeServiceTest {
     @Mock
     private VisionAiClient visionAiClient;
 
+    @Mock
+    private ItemImageService itemImageService;
+
     private WardrobeService wardrobeService;
 
     @BeforeEach
@@ -53,7 +57,8 @@ class WardrobeServiceTest {
                 wardrobeItemRepository,
                 wardrobeSourceRepository,
                 imageStorageService,
-                visionAiClient
+                visionAiClient,
+                itemImageService
         );
     }
 

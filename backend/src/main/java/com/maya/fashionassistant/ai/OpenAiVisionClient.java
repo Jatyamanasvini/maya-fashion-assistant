@@ -65,14 +65,17 @@ public class OpenAiVisionClient implements VisionAiClient {
                       "style": "casual",
                       "fit": "regular",
                       "formality": "casual",
-                      "season": "spring"
+                      "season": "spring",
+                      "bbox": [0.35, 0.19, 0.65, 0.38]
                     }
                   ]
                 }
                 Rules:
                 - "category" MUST be exactly ONE single word chosen from: TOP, BOTTOM, DRESS, OUTERWEAR, SHOES, BAG, ACCESSORY, JEWELRY, OTHER.
+                - "bbox" is REQUIRED: the item's location as [x1,y1,x2,y2] normalized fractions of the image width and height, each between 0.0 and 1.0.
                 - Every other field must be a single short lowercase word (or null when unknown).
-                - Only list items clearly visible. Do not invent items. Ignore people, faces, and background.
+                - Identify EVERY distinct garment or accessory, even if partly occluded.
+                - Only list items clearly visible. Do not invent items. Ignore people, faces, hair, and background.
                 - Output JSON only. Do not explain.
                 """;
 
