@@ -140,7 +140,7 @@ public class WardrobeService {
                 request.getFit(),
                 request.getFormality(),
                 request.getSeason(),
-                request.getImagePath()
+                null // imagePath is assigned only via vision ingestion, never from client input
         );
         return WardrobeItemResponse.fromEntity(wardrobeItemRepository.save(item));
     }
@@ -161,9 +161,7 @@ public class WardrobeService {
         item.setFit(request.getFit());
         item.setFormality(request.getFormality());
         item.setSeason(request.getSeason());
-        if (StringUtils.hasText(request.getImagePath())) {
-            item.setImagePath(request.getImagePath());
-        }
+        // imagePath is never user-controllable — it is managed only by vision ingestion
 
         return WardrobeItemResponse.fromEntity(wardrobeItemRepository.save(item));
     }

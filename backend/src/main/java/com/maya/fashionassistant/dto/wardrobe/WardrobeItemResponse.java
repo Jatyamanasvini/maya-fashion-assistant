@@ -2,6 +2,7 @@ package com.maya.fashionassistant.dto.wardrobe;
 
 import com.maya.fashionassistant.entity.ItemCategory;
 import com.maya.fashionassistant.entity.WardrobeItem;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -20,7 +21,7 @@ public class WardrobeItemResponse {
     private String fit;
     private String formality;
     private String season;
-    private String imagePath;
+    private boolean hasImage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -42,7 +43,7 @@ public class WardrobeItemResponse {
         dto.setFit(item.getFit());
         dto.setFormality(item.getFormality());
         dto.setSeason(item.getSeason());
-        dto.setImagePath(item.getImagePath());
+        dto.setHasImage(StringUtils.hasText(item.getImagePath()));
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         return dto;
@@ -152,12 +153,12 @@ public class WardrobeItemResponse {
         this.season = season;
     }
 
-    public String getImagePath() {
-        return imagePath;
+    public boolean isHasImage() {
+        return hasImage;
     }
 
-    public void setImagePath(String imagePath) {
-        this.imagePath = imagePath;
+    public void setHasImage(boolean hasImage) {
+        this.hasImage = hasImage;
     }
 
     public LocalDateTime getCreatedAt() {

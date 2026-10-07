@@ -140,7 +140,7 @@ export const Wardrobe = () => {
             <div key={item.id} className="item-card">
               <div style={{ position: 'relative' }}>
                 <img
-                  src={item.imagePath ? `/api/wardrobe/images/${item.id}` : 'https://placehold.co/400x400/faf8f5/c98a7d?text=Wardrobe+Item'}
+                  src={item.hasImage ? `/api/wardrobe/images/${item.id}` : 'https://placehold.co/400x400/faf8f5/c98a7d?text=Wardrobe+Item'}
                   alt={item.description}
                   className="item-thumb"
                   onError={(e) => {

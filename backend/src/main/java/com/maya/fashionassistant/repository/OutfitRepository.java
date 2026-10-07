@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface OutfitRepository extends JpaRepository<Outfit, Long> {
     List<Outfit> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Outfit> findByIdAndUserId(Long id, Long userId);
+    Optional<Outfit> findFirstByConversationIdOrderByCreatedAtDesc(Long conversationId);
 }
