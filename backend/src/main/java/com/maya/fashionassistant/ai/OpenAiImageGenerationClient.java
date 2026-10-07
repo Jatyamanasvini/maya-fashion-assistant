@@ -10,11 +10,15 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Base64;
 import java.util.Map;
 
 /**
- * OpenAI Images API client. DALL-E 3 returns a hosted URL (not inline base64),
- * so this client downloads the returned image and returns its bytes.
+ * OpenAI Images API client (endpoint {@code POST /v1/images/generations}).
+ *
+ * <p>Different OpenAI image models return the result differently:
+ * DALL-E 3 returns a hosted {@code url}, while the newer {@code gpt-image-*}
+ * family returns inline base64 ({@code b64_json}). This client supports both.</p>
  *
  * <p>Note: OpenAI's image generation does not accept reference images, so the
  * visualization is prompt-based rather than a faithful composite of the user's
@@ -76,7 +80,15 @@ public class OpenAiImageGenerationClient implements ImageGenerationClient {
                 return null;
             }
 
-            String url = data.get(0).path("url").asText(null);
+            JsonNode first = data.get(0);
+
+            // Newer models (e.g. gpt-image-1) return inline base64; DALL-E returns a URL.
+            String b64 = first.path("b64_json").asText(null);
+            if (b64 != null && !b64.isBlank()) {
+                return Base64.getDecoder().decode(b64);
+            }
+
+            String url = first.path("url").asText(null);
             if (url == null || url.isBlank()) {
                 return null;
             }

@@ -46,6 +46,12 @@ This document tracks the phased development, verifications, test status, known l
 - Ignored client-supplied `imagePath` on wardrobe create/update (image paths are vision-ingestion-only).
 - Added `ChatSecurityIntegrationTest` verifying cross-user conversation/outfit isolation (404).
 
+### [Live verification attempt] External providers
+- **Key validity:** confirmed (`GET /v1/models` → HTTP 200).
+- **Model availability:** `gpt-4o-mini`, `gpt-4o` present; **`dall-e-3` is NOT available** on the tested account — only the newer `gpt-image-*` family (`gpt-image-1`, `gpt-image-1-mini`, `gpt-image-2`, ...).
+- **Inference:** **BLOCKED** — all completion/image calls returned `insufficient_quota` ("You have no credits remaining"). Therefore vision, chat ranking, and image generation remain **IMPLEMENTED but NOT LIVE-VERIFIED**.
+- **Fix applied as a result of the probe:** `OpenAiImageGenerationClient` now handles both response shapes — inline `b64_json` (newer `gpt-image-*` models) and hosted `url` (DALL-E). Default model in `.env.example` changed to `gpt-image-1`.
+
 ---
 
 ## How to run
