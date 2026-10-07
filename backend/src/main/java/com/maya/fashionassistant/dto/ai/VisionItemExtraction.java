@@ -1,11 +1,13 @@
 package com.maya.fashionassistant.dto.ai;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.maya.fashionassistant.entity.ItemCategory;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VisionItemExtraction {
 
+    @JsonDeserialize(using = ItemCategoryDeserializer.class)
     private ItemCategory category;
     private String subcategory;
     private String description;

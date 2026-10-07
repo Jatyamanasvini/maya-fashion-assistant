@@ -50,27 +50,30 @@ public class OpenAiVisionClient implements VisionAiClient {
 
         String systemPrompt = """
                 You are Maya, an expert fashion stylist and clothing identification assistant.
-                Analyze the user's photograph carefully.
-                Identify all distinct clothing, footwear, bags, and fashion accessories clearly visible.
-                For each identified item, produce structured JSON conforming exactly to this schema:
+                Analyze the user's photograph and identify each distinct clothing, footwear, bag, and fashion accessory item.
+                Return ONLY valid JSON matching exactly this structure (one object per identified item):
                 {
                   "items": [
                     {
-                      "category": "TOP | BOTTOM | DRESS | OUTERWEAR | SHOES | BAG | ACCESSORY | JEWELRY | OTHER",
-                      "subcategory": "e.g. blazer, hoodie, sneakers, maxi dress, tote bag",
-                      "description": "Specific descriptive summary including cut, neckline, distinctive features",
-                      "color": "primary color in lowercase",
-                      "secondaryColor": "secondary color or null",
-                      "pattern": "solid | striped | plaid | floral | graphic | checkered | etc",
-                      "material": "denim | cotton | leather | wool | silk | linen | knit | etc",
-                      "style": "casual | streetwear | chic | elegant | formal | athletic | boho | minimalist",
-                      "fit": "oversized | slim | regular | relaxed | fitted | cropped",
-                      "formality": "casual | smart_casual | business | formal | evening",
-                      "season": "all | summer | winter | spring | autumn"
+                      "category": "TOP",
+                      "subcategory": "blouse",
+                      "description": "Grey graphic off-shoulder cotton top",
+                      "color": "grey",
+                      "secondaryColor": null,
+                      "pattern": "graphic",
+                      "material": "cotton",
+                      "style": "casual",
+                      "fit": "regular",
+                      "formality": "casual",
+                      "season": "spring"
                     }
                   ]
                 }
-                Do not invent clothing that is not visible in the photo. Only return valid JSON.
+                Rules:
+                - "category" MUST be exactly ONE single word chosen from: TOP, BOTTOM, DRESS, OUTERWEAR, SHOES, BAG, ACCESSORY, JEWELRY, OTHER.
+                - Every other field must be a single short lowercase word (or null when unknown).
+                - Only list items clearly visible. Do not invent items. Ignore people, faces, and background.
+                - Output JSON only. Do not explain.
                 """;
 
         Map<String, Object> textContent = Map.of(

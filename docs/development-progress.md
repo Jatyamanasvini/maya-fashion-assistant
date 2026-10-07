@@ -69,6 +69,21 @@ Goal: run real vision + outfit-ranking AI with **no API key and no cost**.
 - Added `LiveImageGenerationTest` (opt-in via `MAYA_LIVE_IMAGEGEN=true`).
 - **Result:** generated a real 47,973-byte JPEG in ~22 s. The `ollama` profile now defaults image generation to Pollinations, so the whole pipeline (local AI + free image gen) runs at **$0**.
 
+### [Full end-to-end verification] React → Spring Boot → MySQL → Ollama → Pollinations
+Ran the real application (not tests) against MySQL with the `ollama` profile and exercised the whole pipeline over HTTP:
+1. Register → JWT.
+2. Generated a realistic photo (Pollinations) and `POST /api/wardrobe/photos` → **Ollama vision extracted 3 items** (white top, blue jeans, white sneakers), persisted to MySQL.
+3. Created a conversation and sent *"Pick something cute for brunch with my girlies."* → outfit with an Ollama-generated hairstyle + reason, **live Open-Meteo weather** (7.5 °C Clear), and a **Pollinations-generated visualization**.
+4. `GET /api/outfits/1/image` → **200** with token, **401** without (protected).
+5. Refinement *"I don't want sneakers."* → new outfit containing **TOP + BOTTOM only** (sneakers correctly excluded).
+
+**Real bugs found and fixed by this run** (not caught by the earlier test suite):
+1. The local model echoed the category schema (`"TOP | BOTTOM | DRESS | ..."`) → enum deserialization failed → 502. Fixed with a clearer prompt + lenient `ItemCategoryDeserializer` (+ unit tests).
+2. **Follow-up messages threw `LazyInitializationException`** on `Outfit.items` → 500. Fixed with `@EntityGraph(attributePaths = "items")`; regression test `ChatRefinementIntegrationTest`.
+3. Generated images were stored as `.png` while containing JPEG bytes → wrong `Content-Type`. Fixed by detecting the format from magic bytes.
+
+**Result:** full stack verified end-to-end against real MySQL and real (free) AI.
+
 ---
 
 ## How to run

@@ -380,11 +380,30 @@ public class StylingService {
             if (imageBytes == null || imageBytes.length == 0) {
                 return null;
             }
-            return imageStorageService.store(new ByteArrayInputStream(imageBytes), "outfit.png", "outfits");
+            String filename = "outfit." + detectImageExtension(imageBytes);
+            return imageStorageService.store(new ByteArrayInputStream(imageBytes), filename, "outfits");
         } catch (Exception e) {
             log.warn("Outfit visualization skipped: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Detects the real image format from magic bytes so the stored file extension and
+     * served content type match the actual bytes (image providers may return JPEG or PNG).
+     */
+    private String detectImageExtension(byte[] bytes) {
+        if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8) {
+            return "jpg";
+        }
+        if (bytes.length >= 8 && (bytes[0] & 0xFF) == 0x89
+                && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G') {
+            return "png";
+        }
+        if (bytes.length >= 12 && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return "webp";
+        }
+        return "png";
     }
 
     private String buildImagePrompt(OutfitSelectionResponse selection, String hairstyle,
