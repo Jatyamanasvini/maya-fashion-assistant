@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import { AuthedImage } from '../components/AuthedImage';
 import { Shirt, Scissors, Sparkles, ArrowLeft, Calendar, Image as ImageIcon } from 'lucide-react';
 
 export const OutfitDetails = () => {
@@ -143,7 +144,7 @@ export const OutfitDetails = () => {
             <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', marginBottom: '1rem' }}>
               Outfit Visualization
             </h3>
-            <img
+            <AuthedImage
               src={outfit.generatedImageUrl}
               alt="Generated Look"
               style={{

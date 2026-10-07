@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { AuthedImage } from '../components/AuthedImage';
 import { Shirt, UploadCloud, Search, Filter, Trash2, Tag, Sparkles } from 'lucide-react';
 
 const CATEGORIES = [
@@ -139,14 +140,11 @@ export const Wardrobe = () => {
           {filteredItems.map((item) => (
             <div key={item.id} className="item-card">
               <div style={{ position: 'relative' }}>
-                <img
-                  src={item.hasImage ? `/api/wardrobe/images/${item.id}` : 'https://placehold.co/400x400/faf8f5/c98a7d?text=Wardrobe+Item'}
+                <AuthedImage
+                  src={item.hasImage ? `/api/wardrobe/images/${item.id}` : null}
                   alt={item.description}
                   className="item-thumb"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'https://placehold.co/400x400/faf8f5/c98a7d?text=Wardrobe+Item';
-                  }}
+                  fallback="https://placehold.co/400x400/faf8f5/c98a7d?text=Wardrobe+Item"
                 />
                 <span
                   className="badge badge-primary"

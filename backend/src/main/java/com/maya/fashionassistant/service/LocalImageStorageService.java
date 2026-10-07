@@ -27,11 +27,10 @@ public class LocalImageStorageService implements ImageStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(LocalImageStorageService.class);
 
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "webp");
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png");
     private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList(
             "image/jpeg",
-            "image/png",
-            "image/webp"
+            "image/png"
     );
     private static final long MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
@@ -177,7 +176,7 @@ public class LocalImageStorageService implements ImageStorageService {
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
-            throw new BadRequestException("Invalid file MIME type. Only JPEG, PNG, and WEBP images are supported.");
+            throw new BadRequestException("Invalid file MIME type. Only JPEG and PNG images are supported.");
         }
 
         String originalFilename = file.getOriginalFilename();
@@ -195,7 +194,9 @@ public class LocalImageStorageService implements ImageStorageService {
         try (InputStream is = file.getInputStream()) {
             BufferedImage image = ImageIO.read(is);
             if (image == null) {
-                throw new BadRequestException("Uploaded file is not a valid or readable image");
+                throw new BadRequestException(
+                        "Could not decode this image. Please upload a JPEG or PNG "
+                        + "(WebP/HEIC/AVIF are not supported by the server's image decoder).");
             }
         } catch (IOException e) {
             throw new BadRequestException("Failed to verify image content: " + e.getMessage());

@@ -7,29 +7,75 @@ export const UploadPhotos = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [normalizing, setNormalizing] = useState(false);
   const [extractedItems, setExtractedItems] = useState(null);
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
 
-  const handleFileChange = (e) => {
+  /**
+   * The backend vision pipeline needs a JPEG/PNG. Modern phones and downloads often
+   * produce WebP/HEIC, which Java's ImageIO cannot decode. We normalize whatever the
+   * browser can decode into a downscaled JPEG here (also speeds up local inference).
+   */
+  const normalizeToJpeg = (file, maxDim = 1280) =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('encode-failed'))),
+          'image/jpeg',
+          0.9
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('decode-failed'));
+      };
+      img.src = url;
+    });
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file (JPEG, PNG, WEBP).');
+      setError('Please select a valid image file (JPEG, PNG, WEBP, HEIC).');
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      setError('File size must be less than 15MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      setError('File size must be less than 25MB.');
       return;
     }
 
     setError('');
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setExtractedItems(null);
+    setNormalizing(true);
+    try {
+      const blob = await normalizeToJpeg(file);
+      const jpegFile = new File([blob], 'upload.jpg', { type: 'image/jpeg' });
+      setSelectedFile(jpegFile);
+      setPreviewUrl(URL.createObjectURL(jpegFile));
+      setExtractedItems(null);
+    } catch (err) {
+      setError(
+        "Maya couldn't read this image format in your browser. Please use a JPEG or PNG " +
+        '(for iPhone HEIC photos, export/share as JPEG first).'
+      );
+      setSelectedFile(null);
+      setPreviewUrl('');
+    } finally {
+      setNormalizing(false);
+    }
   };
 
   const handleUpload = async (e) => {
@@ -125,7 +171,7 @@ export const UploadPhotos = () => {
                   Click to upload or drag photo here
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                  Supports JPEG, PNG, WEBP (up to 15MB)
+                  Supports JPEG, PNG, WEBP, HEIC — up to 25MB (converted & optimized automatically)
                 </p>
               </div>
             )}
@@ -135,9 +181,14 @@ export const UploadPhotos = () => {
             onClick={handleUpload}
             className="btn btn-primary"
             style={{ minWidth: '220px' }}
-            disabled={!selectedFile || uploading}
+            disabled={!selectedFile || uploading || normalizing}
           >
-            {uploading ? (
+            {normalizing ? (
+              <>
+                <Sparkles size={18} />
+                <span>Preparing image...</span>
+              </>
+            ) : uploading ? (
               <>
                 <Sparkles size={18} />
                 <span>Analyzing with Vision AI...</span>

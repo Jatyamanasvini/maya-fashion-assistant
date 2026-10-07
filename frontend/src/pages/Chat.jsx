@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
+import { AuthedImage } from '../components/AuthedImage';
 import {
   Sparkles,
   Send,
@@ -412,7 +413,7 @@ export const Chat = () => {
                           <ImageIcon size={14} color="var(--primary)" />
                           <span>Complete Look Visualization</span>
                         </div>
-                        <img
+                        <AuthedImage
                           src={msg.outfit.generatedImageUrl}
                           alt="Curated look visualization"
                           style={{
