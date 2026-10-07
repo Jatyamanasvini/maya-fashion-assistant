@@ -3,6 +3,9 @@ backend/target/
 frontend/dist/
 frontend/node_modules/
 
+# Pinned local toolchain (do not commit binaries)
+.tools/
+
 # Runtime storage (private user images)
 uploads/
 
