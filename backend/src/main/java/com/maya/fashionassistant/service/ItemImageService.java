@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -48,11 +49,19 @@ public class ItemImageService {
 
     /**
      * @param sourceStoragePath stored path of the original uploaded photo
-     * @param bbox              normalized [x1,y1,x2,y2] fractions of the image
+     * @param bbox              normalized [x1,y1,x2,y2] fractions of the image (may be null)
+     * @param category          item category (TOP/BOTTOM/DRESS/OUTERWEAR/...)
      * @return stored path of the isolated item image, or {@code null} on failure
      */
-    public String createItemImage(String sourceStoragePath, List<Double> bbox) {
-        if (!enabled || bbox == null || bbox.size() != 4) {
+    public String createItemImage(String sourceStoragePath, List<Double> bbox, String category) {
+        if (!enabled) {
+            return null;
+        }
+        boolean clothCategory = category != null
+                && Set.of("TOP", "BOTTOM", "DRESS", "OUTERWEAR").contains(category.toUpperCase());
+        boolean hasBbox = bbox != null && bbox.size() == 4;
+        if (!hasBbox && !clothCategory) {
+            // Not enough information to isolate this item — keep the original photo.
             return null;
         }
 
@@ -64,11 +73,15 @@ public class ItemImageService {
                 return null;
             }
 
-            String bboxArg = bbox.stream().map(String::valueOf).collect(Collectors.joining(","));
+            String bboxArg = hasBbox
+                    ? bbox.stream().map(String::valueOf).collect(Collectors.joining(","))
+                    : "-";
+            String categoryArg = category != null ? category.toUpperCase() : "OTHER";
             tempOutput = Files.createTempFile("maya-item-", ".png");
 
             ProcessBuilder builder = new ProcessBuilder(
-                    pythonExecutable, scriptPath, sourceFile.getAbsolutePath(), bboxArg, tempOutput.toString());
+                    pythonExecutable, scriptPath, sourceFile.getAbsolutePath(), bboxArg, categoryArg,
+                    tempOutput.toString());
             builder.redirectErrorStream(true);
             Process process = builder.start();
 

@@ -95,6 +95,15 @@ Implemented:
 
 **Honest quality caveat:** classical GrabCut is strong for high-contrast items (denim came out clean) but weak for low-contrast ones (white sneakers on a light floor), and the bounding box comes from the small local vision model, which is approximate. When the cutout is unreliable the pipeline falls back to the item's cropped region. A learned segmentation model (U2Net/SAM) would improve this.
 
+### [Feature upgrade] Learned segmentation (U²Net) + sharpening
+Replaced GrabCut with real learned models run locally via onnxruntime (still $0):
+- **`u2net_cloth_seg`** — segments clothing **by category** (upper / lower / full-body), so **tops, bottoms and dresses need no bounding box** and come out as clean, sharp cutouts on white.
+- **`u2net`** (salient object) — used on the bounding-box crop for shoes/bags/accessories.
+- Added **unsharp-mask sharpening** and small-item upscaling, plus bicubic board scaling.
+- Models are downloaded once (checksum-verified) to the gitignored `.tools/models/` and located automatically.
+
+**Verified on a real photo:** the white turtleneck and blue jeans now produce clean, sharp product shots on white. **Remaining limitation:** white shoes on a light floor still fall back to a plain crop — that needs a shoe-specific model or SAM.
+
 ---
 
 ## How to run

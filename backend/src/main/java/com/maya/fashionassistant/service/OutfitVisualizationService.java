@@ -11,6 +11,8 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -78,7 +80,7 @@ public class OutfitVisualizationService {
         BufferedImage board = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = board.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
         g.setColor(Color.WHITE);
@@ -121,11 +123,26 @@ public class OutfitVisualizationService {
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(board, "png", baos);
+            ImageIO.write(sharpen(board), "png", baos);
             return baos.toByteArray();
         } catch (Exception e) {
             log.warn("Failed to encode outfit board: {}", e.getMessage());
             return null;
+        }
+    }
+
+    /** Light unsharp-mask sharpening so scaled item images stay crisp. */
+    private BufferedImage sharpen(BufferedImage src) {
+        float[] kernel = {
+                0f, -0.6f, 0f,
+                -0.6f, 3.4f, -0.6f,
+                0f, -0.6f, 0f
+        };
+        try {
+            return new ConvolveOp(new Kernel(3, 3, kernel), ConvolveOp.EDGE_NO_OP, null).filter(src, null);
+        } catch (Exception e) {
+            log.warn("Sharpening skipped: {}", e.getMessage());
+            return src;
         }
     }
 }

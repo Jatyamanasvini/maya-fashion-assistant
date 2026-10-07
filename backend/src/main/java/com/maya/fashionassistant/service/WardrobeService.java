@@ -75,13 +75,13 @@ public class WardrobeService {
         if (analysisResponse != null && analysisResponse.getItems() != null) {
             for (VisionItemExtraction extracted : analysisResponse.getItems()) {
                 if (isValidExtraction(extracted)) {
-                    // Isolate this item on a white background when a location was provided.
+                    // Isolate this item on a white background when possible.
                     String itemImagePath = originalPath;
-                    if (extracted.getBbox() != null) {
-                        String isolated = itemImageService.createItemImage(originalPath, extracted.getBbox());
-                        if (isolated != null) {
-                            itemImagePath = isolated;
-                        }
+                    String isolated = itemImageService.createItemImage(
+                            originalPath, extracted.getBbox(),
+                            extracted.getCategory() != null ? extracted.getCategory().name() : null);
+                    if (isolated != null) {
+                        itemImagePath = isolated;
                     }
 
                     WardrobeItem item = new WardrobeItem(
