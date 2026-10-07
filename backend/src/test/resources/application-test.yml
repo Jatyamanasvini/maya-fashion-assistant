@@ -1,0 +1,40 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:maya_test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+security:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 3600000
+
+storage:
+  location: ./target/test-uploads
+
+ai:
+  provider: MOCK
+  model: test-model
+  vision-model: test-vision-model
+  image-gen:
+    provider: MOCK
+    model: test-image-gen-model
+
+weather:
+  provider: MOCK
+  base-url: http://localhost:8089
+  default-city: TestCity
+  default-lat: 0.0
+  default-lon: 0.0

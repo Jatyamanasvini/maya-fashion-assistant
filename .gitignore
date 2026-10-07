@@ -1,0 +1,22 @@
+# Build output
+backend/target/
+frontend/dist/
+frontend/node_modules/
+
+# Runtime storage (private user images)
+uploads/
+
+# Local environment / secrets
+.env
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
