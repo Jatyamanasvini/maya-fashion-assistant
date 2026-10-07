@@ -17,6 +17,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.util.StringUtils;
 
+/**
+ * Selects the active AI provider implementations based on configuration.
+ *
+ * <p>Providers:</p>
+ * <ul>
+ *   <li>{@code OPENAI} — OpenAI cloud API (requires a key with credits).</li>
+ *   <li>{@code OLLAMA} — a local, free Ollama server. Ollama exposes an
+ *       OpenAI-compatible API, so the same OpenAI-compatible clients are reused;
+ *       only {@code base-url}, {@code model} and a dummy {@code api-key} differ.
+ *       Image generation is not supported by Ollama and stays in MOCK mode.</li>
+ *   <li>{@code MOCK} — offline deterministic fallback (no external calls).</li>
+ * </ul>
+ */
 @Configuration
 public class AiConfig {
 
@@ -39,8 +52,8 @@ public class AiConfig {
     public VisionAiClient activeVisionAiClient(
             OpenAiVisionClient openAiVisionClient,
             MockVisionAiClient mockVisionAiClient) {
-        if ("OPENAI".equalsIgnoreCase(aiProvider) && StringUtils.hasText(apiKey)) {
-            log.info("Configured active Vision AI provider: OpenAI");
+        if (usesOpenAiCompatibleProvider()) {
+            log.info("Configured active Vision AI provider: {}", providerLabel());
             return openAiVisionClient;
         }
         log.info("Configured active Vision AI provider: Mock (offline/testing mode)");
@@ -52,8 +65,8 @@ public class AiConfig {
     public ChatAiClient activeChatAiClient(
             OpenAiChatClient openAiChatClient,
             MockChatClient mockChatClient) {
-        if ("OPENAI".equalsIgnoreCase(aiProvider) && StringUtils.hasText(apiKey)) {
-            log.info("Configured active outfit-ranking AI provider: OpenAI");
+        if (usesOpenAiCompatibleProvider()) {
+            log.info("Configured active outfit-ranking AI provider: {}", providerLabel());
             return openAiChatClient;
         }
         log.info("Configured active outfit-ranking AI provider: Mock (deterministic fallback)");
@@ -71,5 +84,26 @@ public class AiConfig {
         }
         log.info("Configured active image-generation provider: Mock (no visualization)");
         return mockImageGenerationClient;
+    }
+
+    /**
+     * Ollama implements the OpenAI-compatible chat/vision protocol, so the same
+     * clients are used. OpenAI additionally requires a non-empty API key.
+     */
+    private boolean usesOpenAiCompatibleProvider() {
+        if ("OLLAMA".equalsIgnoreCase(aiProvider)) {
+            return true;
+        }
+        return "OPENAI".equalsIgnoreCase(aiProvider) && StringUtils.hasText(apiKey);
+    }
+
+    private String providerLabel() {
+        if ("OLLAMA".equalsIgnoreCase(aiProvider)) {
+            return "Ollama (local, OpenAI-compatible)";
+        }
+        if ("OPENAI".equalsIgnoreCase(aiProvider)) {
+            return "OpenAI";
+        }
+        return "Mock";
     }
 }

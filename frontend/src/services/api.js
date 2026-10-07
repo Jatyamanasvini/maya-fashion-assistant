@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 45000,
+  // Generous timeout: a locally-hosted model (e.g. Ollama on CPU) can take a while.
+  timeout: 180000,
 });
 
 api.interceptors.request.use(

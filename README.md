@@ -53,7 +53,7 @@ user message → persist → intent extraction (deterministic)
 | Backend | Java 21, Spring Boot 3.3.4, Spring Data JPA, Spring Security, JJWT 0.12.5 |
 | Database | MySQL (runtime), H2 (tests) |
 | Frontend | React 18, Vite 5, React Router 6, Axios |
-| AI | OpenAI (vision, chat ranking, image generation) via provider abstractions |
+| AI | Provider-abstracted: **Ollama** (local, free, offline) or OpenAI (vision, ranking, image generation) |
 | Weather | Open-Meteo (free, no key required) |
 | Docs | springdoc-openapi (Swagger UI at `/swagger-ui.html`) |
 
@@ -91,6 +91,34 @@ npm run dev        # http://localhost:3000 (proxies /api → http://localhost:80
 ```bash
 cd backend
 mvn test           # 17 tests, H2-backed, no external services required
+```
+
+## Run with free local AI (Ollama)
+
+MAYA can run real vision + outfit-ranking AI **locally, offline, and for free** using
+[Ollama](https://ollama.com), which exposes an OpenAI-compatible API. No API key, no cost.
+
+```bash
+# 1. Install Ollama and start it (default: http://localhost:11434)
+# 2. Pull a vision-capable model
+ollama pull qwen2.5vl:3b
+
+# 3. Run the backend with the bundled "ollama" profile
+cd backend
+mvn spring-boot:run -Dspring-boot.run.profiles=ollama
+```
+
+What it does: `AiConfig` recognises `AI_PROVIDER=OLLAMA` and routes the existing
+OpenAI-compatible clients at your local server. One multimodal model
+(`qwen2.5vl:3b`) handles both photo item-extraction and outfit ranking.
+
+**Limitations of the local setup:** Ollama does not generate images, so outfit
+visualization stays in MOCK mode (no generated image). CPU inference is slower than
+the cloud — the frontend timeout is already raised to 180s.
+
+Verify the integration end-to-end (requires Ollama running + model pulled):
+```bash
+MAYA_LIVE_OLLAMA=true mvn -Dtest=LiveOllamaIntegrationTest test
 ```
 
 ## Environment variables
@@ -147,9 +175,11 @@ Without an `AI_API_KEY`, MAYA runs in **MOCK mode** — vision extraction return
 
 ## Known limitations
 
-- AI and weather integrations are **implemented but not live-verified** (no provider credentials available in this environment).
-- Image generation is prompt-based only — OpenAI DALL-E 3 does not accept reference images, so the visualization does not reproduce the user's exact garments.
-- A `GEMINI` vision provider is referenced in configuration but not yet implemented.
+- **Verification status:**
+  - ✅ **Live-verified:** local AI via **Ollama** (`qwen2.5vl:3b`) — vision + outfit ranking — and **weather** via Open-Meteo. Both free, no paid key.
+  - 🟡 **Implemented, not live-verified:** cloud **OpenAI** (the test account had no credit balance) and **image generation** (Ollama cannot generate images; OpenAI has no credits here).
+- **Ollama** supports vision + text but **cannot generate images**, so outfit visualization stays in MOCK mode under the local profile.
+- Image generation is prompt-based; even with OpenAI, the configured model does not accept reference images, so a visualization does not reproduce the user's exact garments.
 - No rate limiting on auth endpoints (acceptable for a learning/demo project).
 
 ## Documentation

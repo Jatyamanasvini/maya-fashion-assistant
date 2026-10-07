@@ -15,13 +15,13 @@ This document tracks the phased development, verifications, test status, known l
 | **Phase 3** | Authentication, JWT, Security | **COMPLETED** | BCrypt, JJWT 0.12.5, CustomUserDetailsService, `/api/auth/register`, `/api/auth/login`, `/api/users/me`. Integration + unit tested. |
 | **Phase 4** | React application foundation + Auth UI | **COMPLETED** | React 18, React Router v6, Axios interceptor, AuthContext, protected routes. Verified production build. |
 | **Phase 5** | Wardrobe CRUD & secure image storage | **COMPLETED** | `ImageStorageService` + `LocalImageStorageService` (path-traversal, MIME, magic-byte validation), `WardrobeController`, protected image endpoints. Ownership enforced. Tested. |
-| **Phase 6** | Vision AI integration | **PARTIAL** | `VisionAiClient` abstraction + OpenAI (`/chat/completions`, JSON schema) + Mock clients. Not live-verified (no key). No Gemini client yet. |
+| **Phase 6** | Vision AI integration | **PARTIAL** | `VisionAiClient` abstraction + OpenAI + Mock clients, plus a local **Ollama** provider. **Live-verified** via local `qwen2.5vl:3b` (see log). Cloud OpenAI not live-verified (no credits). |
 | **Phase 7** | Chat & Conversation persistence | **COMPLETED** | `ConversationService`, `ChatController` (`/api/chat/conversations`), message persistence, ownership validation. Tested. |
 | **Phase 8** | Intent extraction | **COMPLETED** | Deterministic `IntentExtractor` (occasion, style, formality, negative constraints, refinement signals). Tested. |
-| **Phase 9** | Wardrobe-based recommendation engine | **COMPLETED** | `StylingService` orchestrates retrieval → AI ranking → deterministic fallback → **ownership validation** → outfit persistence. NEVER invents items. Tested. |
-| **Phase 10** | Weather & context | **COMPLETED** | `WeatherService` + `WeatherClient` (Open-Meteo + Mock). Optional location; no coordinates persisted. Not live-verified. |
+| **Phase 9** | Wardrobe-based recommendation engine | **COMPLETED** | `StylingService` orchestrates retrieval → AI ranking → deterministic fallback → **ownership validation** → outfit persistence. NEVER invents items. Tested; AI ranking **live-verified** via local Ollama. |
+| **Phase 10** | Weather & context | **COMPLETED** | `WeatherService` + `WeatherClient` (Open-Meteo + Mock). Optional location; no coordinates persisted. **Live-verified** against the free Open-Meteo API (no key). |
 | **Phase 11** | Hairstyle recommendation | **COMPLETED** | Deterministic picker + AI-provided hairstyle; surfaced with each outfit. |
-| **Phase 12** | Image generation | **PARTIAL** | `ImageGenerationClient` + OpenAI (`/images/generations`) + Mock. Prompt-based (DALL-E 3 has no reference-image support). Not live-verified. |
+| **Phase 12** | Image generation | **PARTIAL** | `ImageGenerationClient` + OpenAI (`/images/generations`) + Mock. Prompt-based (OpenAI image models accept no reference images). Handles both `url` and `b64_json` responses. Cannot be run via Ollama. Not live-verified (cloud has no credits). |
 | **Phase 13** | Conversational refinement | **COMPLETED** | "I don't want sneakers", "make it more feminine", "give me another option" handled; constraints applied to the current outfit. Tested. |
 | **Phase 14** | Security hardening & error handling | **PARTIAL** | `@RestControllerAdvice`; image paths no longer exposed; client `imagePath` ignored; ownership checks throughout. Rate limiting not yet added. |
 | **Phase 15** | Testing, Documentation, Polish | **PARTIAL** | 17 tests passing. README + architecture docs present. |
@@ -51,6 +51,16 @@ This document tracks the phased development, verifications, test status, known l
 - **Model availability:** `gpt-4o-mini`, `gpt-4o` present; **`dall-e-3` is NOT available** on the tested account — only the newer `gpt-image-*` family (`gpt-image-1`, `gpt-image-1-mini`, `gpt-image-2`, ...).
 - **Inference:** **BLOCKED** — all completion/image calls returned `insufficient_quota` ("You have no credits remaining"). Therefore vision, chat ranking, and image generation remain **IMPLEMENTED but NOT LIVE-VERIFIED**.
 - **Fix applied as a result of the probe:** `OpenAiImageGenerationClient` now handles both response shapes — inline `b64_json` (newer `gpt-image-*` models) and hosted `url` (DALL-E). Default model in `.env.example` changed to `gpt-image-1`.
+- **Weather — LIVE-VERIFIED (free, keyless):** a live `GET https://api.open-meteo.com/v1/forecast` returned the exact shape the client parses (`current.temperature_2m`, `current.weather_code`, `current.wind_speed_10m`, `current.precipitation`). No credentials or cost involved.
+
+### [Phases 6 & 9] Local free AI via Ollama — LIVE-VERIFIED
+Goal: run real vision + outfit-ranking AI with **no API key and no cost**.
+- Installed Ollama locally without `sudo` (Homebrew was owned by another user; used the official `Ollama-darwin.zip` in the gitignored `.tools/`), started the server on `localhost:11434`, and pulled the multimodal model `qwen2.5vl:3b` (~3.2 GB).
+- Added an `OLLAMA` provider to `AiConfig` (reusing the existing OpenAI-compatible clients — Ollama speaks that protocol) and an `application-ollama.yml` profile.
+- Raised the frontend request timeout to 180s (CPU inference is slower than cloud).
+- Added `LiveOllamaIntegrationTest` (opt-in via `MAYA_LIVE_OLLAMA=true`).
+- **Result:** `LiveOllamaIntegrationTest` → **2/2 passed**. MAYA's real `OpenAiVisionClient` extracted an item from a synthetic image, and its real `OpenAiChatClient` returned a schema-correct outfit that **respected an "avoid sneakers" constraint** (chose loafers, skipped sneakers).
+- Image generation remains unavailable locally (Ollama does not generate images) and not live-verified in the cloud (no credits).
 
 ---
 

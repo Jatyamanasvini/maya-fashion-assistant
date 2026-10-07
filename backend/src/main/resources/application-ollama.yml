@@ -1,0 +1,29 @@
+# ============================================================
+# MAYA — local, free AI profile (Ollama)
+# ============================================================
+# Ollama is a local model server that exposes an OpenAI-compatible API.
+# No API key, no cost, runs offline.
+#
+# Setup:
+#   1. Install Ollama and start it (it listens on http://localhost:11434)
+#   2. Pull a vision-capable model, e.g.:
+#        ollama pull qwen2.5vl:3b
+#   3. Run the backend with this profile:
+#        mvn spring-boot:run -Dspring-boot.run.profiles=ollama
+#
+# Notes:
+#   - Any model with vision + instruction-following works (qwen2.5vl, llava, gemma3, ...).
+#   - Ollama does NOT generate images, so outfit visualization stays in MOCK mode
+#     unless you separately configure an image-generation provider.
+#   - CPU inference can be slow; the frontend request timeout has been raised accordingly.
+# ============================================================
+
+ai:
+  provider: "${AI_PROVIDER:OLLAMA}"
+  # Ollama ignores the key value, but the OpenAI-compatible clients require a non-empty one.
+  api-key: "${AI_API_KEY:ollama}"
+  base-url: "${AI_BASE_URL:http://localhost:11434/v1}"
+  model: "${AI_MODEL:qwen2.5vl:3b}"
+  vision-model: "${AI_VISION_MODEL:qwen2.5vl:3b}"
+  image-gen:
+    provider: "${IMAGE_GENERATION_PROVIDER:MOCK}"

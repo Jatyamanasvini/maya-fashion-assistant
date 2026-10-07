@@ -34,7 +34,7 @@ storage:
   location: ${IMAGE_STORAGE_PATH:./uploads/images}
 
 ai:
-  provider: ${AI_PROVIDER:MOCK} # MOCK, OPENAI, GEMINI
+  provider: ${AI_PROVIDER:MOCK} # MOCK, OPENAI, OLLAMA (local, OpenAI-compatible)
   api-key: ${AI_API_KEY:}
   base-url: ${AI_BASE_URL:https://api.openai.com/v1}
   model: ${AI_MODEL:gpt-4o-mini}
