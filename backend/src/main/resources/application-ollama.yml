@@ -26,4 +26,9 @@ ai:
   model: "${AI_MODEL:qwen2.5vl:3b}"
   vision-model: "${AI_VISION_MODEL:qwen2.5vl:3b}"
   image-gen:
-    provider: "${IMAGE_GENERATION_PROVIDER:MOCK}"
+    # Free, keyless image generation via Pollinations.ai.
+    # Set IMAGE_GENERATION_PROVIDER=MOCK to disable visualizations entirely.
+    provider: "${IMAGE_GENERATION_PROVIDER:POLLINATIONS}"
+    base-url: "${IMAGE_GENERATION_BASE_URL:https://image.pollinations.ai}"
+    width: "${IMAGE_GENERATION_WIDTH:1024}"
+    height: "${IMAGE_GENERATION_HEIGHT:1024}"

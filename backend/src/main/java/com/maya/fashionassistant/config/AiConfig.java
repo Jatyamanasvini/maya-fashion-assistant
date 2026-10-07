@@ -8,6 +8,7 @@ import com.maya.fashionassistant.ai.MockVisionAiClient;
 import com.maya.fashionassistant.ai.OpenAiChatClient;
 import com.maya.fashionassistant.ai.OpenAiImageGenerationClient;
 import com.maya.fashionassistant.ai.OpenAiVisionClient;
+import com.maya.fashionassistant.ai.PollinationsImageGenerationClient;
 import com.maya.fashionassistant.ai.VisionAiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +78,12 @@ public class AiConfig {
     @Primary
     public ImageGenerationClient activeImageGenerationClient(
             OpenAiImageGenerationClient openAiImageGenerationClient,
+            PollinationsImageGenerationClient pollinationsImageGenerationClient,
             MockImageGenerationClient mockImageGenerationClient) {
+        if ("POLLINATIONS".equalsIgnoreCase(imageGenProvider)) {
+            log.info("Configured active image-generation provider: Pollinations (free, no key)");
+            return pollinationsImageGenerationClient;
+        }
         if ("OPENAI".equalsIgnoreCase(imageGenProvider) && StringUtils.hasText(imageGenApiKey)) {
             log.info("Configured active image-generation provider: OpenAI");
             return openAiImageGenerationClient;

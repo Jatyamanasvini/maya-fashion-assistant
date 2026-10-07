@@ -21,7 +21,7 @@ This document tracks the phased development, verifications, test status, known l
 | **Phase 9** | Wardrobe-based recommendation engine | **COMPLETED** | `StylingService` orchestrates retrieval → AI ranking → deterministic fallback → **ownership validation** → outfit persistence. NEVER invents items. Tested; AI ranking **live-verified** via local Ollama. |
 | **Phase 10** | Weather & context | **COMPLETED** | `WeatherService` + `WeatherClient` (Open-Meteo + Mock). Optional location; no coordinates persisted. **Live-verified** against the free Open-Meteo API (no key). |
 | **Phase 11** | Hairstyle recommendation | **COMPLETED** | Deterministic picker + AI-provided hairstyle; surfaced with each outfit. |
-| **Phase 12** | Image generation | **PARTIAL** | `ImageGenerationClient` + OpenAI (`/images/generations`) + Mock. Prompt-based (OpenAI image models accept no reference images). Handles both `url` and `b64_json` responses. Cannot be run via Ollama. Not live-verified (cloud has no credits). |
+| **Phase 12** | Image generation | **COMPLETED** | `ImageGenerationClient` + **Pollinations** (free, keyless) + OpenAI (`/images/generations`, handles `url` & `b64_json`) + Mock. Prompt-based (no reference images). **Live-verified** via Pollinations (real JPEG generated). |
 | **Phase 13** | Conversational refinement | **COMPLETED** | "I don't want sneakers", "make it more feminine", "give me another option" handled; constraints applied to the current outfit. Tested. |
 | **Phase 14** | Security hardening & error handling | **PARTIAL** | `@RestControllerAdvice`; image paths no longer exposed; client `imagePath` ignored; ownership checks throughout. Rate limiting not yet added. |
 | **Phase 15** | Testing, Documentation, Polish | **PARTIAL** | 17 tests passing. README + architecture docs present. |
@@ -61,6 +61,13 @@ Goal: run real vision + outfit-ranking AI with **no API key and no cost**.
 - Added `LiveOllamaIntegrationTest` (opt-in via `MAYA_LIVE_OLLAMA=true`).
 - **Result:** `LiveOllamaIntegrationTest` → **2/2 passed**. MAYA's real `OpenAiVisionClient` extracted an item from a synthetic image, and its real `OpenAiChatClient` returned a schema-correct outfit that **respected an "avoid sneakers" constraint** (chose loafers, skipped sneakers).
 - Image generation remains unavailable locally (Ollama does not generate images) and not live-verified in the cloud (no credits).
+
+### [Phase 12] Free image generation via Pollinations — LIVE-VERIFIED
+- Ollama cannot generate images, so added a dedicated `POLLINATIONS` image-generation provider: a free, **keyless** text-to-image endpoint (`https://image.pollinations.ai/prompt/...`).
+- Implemented `PollinationsImageGenerationClient` (no new dependencies; uses Spring's `RestClient`).
+- Improved the visualization prompt to describe the **actual selected garments** (color + description), not just roles.
+- Added `LiveImageGenerationTest` (opt-in via `MAYA_LIVE_IMAGEGEN=true`).
+- **Result:** generated a real 47,973-byte JPEG in ~22 s. The `ollama` profile now defaults image generation to Pollinations, so the whole pipeline (local AI + free image gen) runs at **$0**.
 
 ---
 

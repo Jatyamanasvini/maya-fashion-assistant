@@ -124,7 +124,7 @@ public class StylingService {
         if (outfitSelections.isEmpty()) {
             outfitResponse = null;
         } else {
-            String generatedImagePath = generateVisualization(selection, hairstyle, intent, weather);
+            String generatedImagePath = generateVisualization(selection, hairstyle, intent, weather, wardrobe);
             outfitResponse = outfitService.createOutfit(userId, conversationId, hairstyle, reason, outfitSelections, generatedImagePath);
         }
 
@@ -373,9 +373,9 @@ public class StylingService {
     }
 
     private String generateVisualization(OutfitSelectionResponse selection, String hairstyle,
-                                         StylingIntent intent, WeatherInfo weather) {
+                                         StylingIntent intent, WeatherInfo weather, List<WardrobeItem> wardrobe) {
         try {
-            String prompt = buildImagePrompt(selection, hairstyle, intent, weather);
+            String prompt = buildImagePrompt(selection, hairstyle, intent, weather, wardrobe);
             byte[] imageBytes = imageGenerationClient.generateImage(prompt);
             if (imageBytes == null || imageBytes.length == 0) {
                 return null;
@@ -388,12 +388,25 @@ public class StylingService {
     }
 
     private String buildImagePrompt(OutfitSelectionResponse selection, String hairstyle,
-                                    StylingIntent intent, WeatherInfo weather) {
+                                    StylingIntent intent, WeatherInfo weather, List<WardrobeItem> wardrobe) {
+        Map<Long, WardrobeItem> byId = wardrobe.stream()
+                .collect(Collectors.toMap(WardrobeItem::getId, item -> item));
+
+        // Describe the actual selected garment metadata when available, falling back to the role.
+        List<String> itemDescriptions = selection.getItems().stream()
+                .map(item -> {
+                    WardrobeItem wardrobeItem = byId.get(item.getWardrobeItemId());
+                    if (wardrobeItem == null || wardrobeItem.getDescription() == null) {
+                        return item.getRole().toLowerCase(Locale.ROOT);
+                    }
+                    String color = wardrobeItem.getColor() != null ? wardrobeItem.getColor() + " " : "";
+                    return color + wardrobeItem.getDescription();
+                })
+                .collect(Collectors.toList());
+
         StringBuilder sb = new StringBuilder();
-        sb.append("Fashion lookbook-style visualization of a complete outfit consisting of: ");
-        sb.append(selection.getItems().stream()
-                .map(item -> item.getRole().toLowerCase(Locale.ROOT))
-                .collect(Collectors.joining(", ")));
+        sb.append("Fashion lookbook photo of a person wearing a complete outfit: ");
+        sb.append(String.join(", ", itemDescriptions));
         sb.append(". Hairstyle: ").append(hairstyle).append(".");
         if (intent.getOccasion() != null) sb.append(" Occasion: ").append(intent.getOccasion()).append(".");
         if (intent.getStyle() != null) sb.append(" Style: ").append(intent.getStyle()).append(".");

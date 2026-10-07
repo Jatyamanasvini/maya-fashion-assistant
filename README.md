@@ -112,13 +112,17 @@ What it does: `AiConfig` recognises `AI_PROVIDER=OLLAMA` and routes the existing
 OpenAI-compatible clients at your local server. One multimodal model
 (`qwen2.5vl:3b`) handles both photo item-extraction and outfit ranking.
 
-**Limitations of the local setup:** Ollama does not generate images, so outfit
-visualization stays in MOCK mode (no generated image). CPU inference is slower than
-the cloud — the frontend timeout is already raised to 180s.
+**Image generation under this profile:** Ollama cannot generate images, so the
+`ollama` profile defaults image generation to **Pollinations.ai** — a free, keyless
+text-to-image service. Set `IMAGE_GENERATION_PROVIDER=MOCK` to disable visualizations.
 
-Verify the integration end-to-end (requires Ollama running + model pulled):
+**Performance:** CPU inference is slower than the cloud — the frontend timeout is
+already raised to 180 s.
+
+Verify the integrations end-to-end (Ollama must be running with the model pulled):
 ```bash
-MAYA_LIVE_OLLAMA=true mvn -Dtest=LiveOllamaIntegrationTest test
+MAYA_LIVE_OLLAMA=true   mvn -Dtest=LiveOllamaIntegrationTest test       # vision + ranking
+MAYA_LIVE_IMAGEGEN=true mvn -Dtest=LiveImageGenerationTest test         # image generation
 ```
 
 ## Environment variables
@@ -176,10 +180,9 @@ Without an `AI_API_KEY`, MAYA runs in **MOCK mode** — vision extraction return
 ## Known limitations
 
 - **Verification status:**
-  - ✅ **Live-verified:** local AI via **Ollama** (`qwen2.5vl:3b`) — vision + outfit ranking — and **weather** via Open-Meteo. Both free, no paid key.
-  - 🟡 **Implemented, not live-verified:** cloud **OpenAI** (the test account had no credit balance) and **image generation** (Ollama cannot generate images; OpenAI has no credits here).
-- **Ollama** supports vision + text but **cannot generate images**, so outfit visualization stays in MOCK mode under the local profile.
-- Image generation is prompt-based; even with OpenAI, the configured model does not accept reference images, so a visualization does not reproduce the user's exact garments.
+  - ✅ **Live-verified (all free):** local AI via **Ollama** (`qwen2.5vl:3b`) for vision + outfit ranking, **weather** via Open-Meteo, and **image generation** via **Pollinations.ai** (keyless).
+  - 🟡 **Implemented, not live-verified:** cloud **OpenAI** (the test account had no credit balance).
+- Image generation is prompt-based; neither the Pollinations nor OpenAI provider accepts reference images, so a visualization is a stylistic interpretation rather than a pixel-accurate reproduction of the user's garments.
 - No rate limiting on auth endpoints (acceptable for a learning/demo project).
 
 ## Documentation
