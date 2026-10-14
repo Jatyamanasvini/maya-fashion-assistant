@@ -46,13 +46,13 @@ ai:
 weather:
   provider: ${WEATHER_PROVIDER:OPEN_METEO}
 
-# Garment isolation (Python + OpenCV + U^2Net) is enabled in the container image.
-# NOTE: it needs ~1 GB+ RAM. On Render's FREE 512 MB tier it can OOM-kill the app,
-# so it defaults to OFF for the cloud profile — set MAYA_SEGMENTATION_ENABLED=true
-# only on an instance with enough memory.
+# Garment cutouts: the heavy Python inference runs in a separate microservice
+# (segmentation-service/) so the JVM host can stay small. Point remote-url at it.
+# Local Python execution stays OFF (it needs ~1 GB RAM).
 maya:
   segmentation:
     enabled: ${MAYA_SEGMENTATION_ENABLED:false}
+    remote-url: ${MAYA_SEGMENTATION_REMOTE_URL:}
     python: ${MAYA_PYTHON:python3}
     script: ${MAYA_SEG_SCRIPT:scripts/crop_item.py}
 

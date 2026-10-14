@@ -25,11 +25,22 @@ services:
         value: gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash
       - key: AI_REASONING_EFFORT
         value: low
-      # Garment cutouts need ~1GB+ RAM; off on the free 512MB tier to avoid OOM crashes.
-      # To enable on a bigger instance: set true and keep MAYA_SEG_MODEL=lite (small model).
+      # Garment cutouts run in the separate 'maya-segmenter' service below.
+      # After both deploy, set this to the segmenter's real URL (see Render dashboard).
+      - key: MAYA_SEGMENTATION_REMOTE_URL
+        value: https://maya-segmenter.onrender.com
       - key: MAYA_SEGMENTATION_ENABLED
         value: "false"
-      - key: MAYA_SEG_MODEL
-        value: lite
       - key: JWT_SECRET
         generateValue: true
+
+  # Tiny Python service that only does the garment cutouts (fits in 512 MB on its own).
+  - type: web
+    name: maya-segmenter
+    runtime: docker
+    plan: free
+    dockerfilePath: ./segmentation-service/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: MAYA_SEG_MODEL
+        value: lite
