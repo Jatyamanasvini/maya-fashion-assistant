@@ -1,7 +1,10 @@
 # ============================================================
 # MAYA segmentation microservice — garment cutouts on white.
-#   build (from repo root):  docker build -f segmentation-service/Dockerfile -t maya-segmenter .
-#   run:                     docker run -p 8080:8080 maya-segmenter
+#
+# Render settings for this service:
+#   Root Directory  = (leave empty)
+#   Dockerfile Path = Dockerfile.segmenter
+#   Runtime         = Docker
 # ============================================================
 FROM python:3.11-slim
 
@@ -13,8 +16,7 @@ RUN apt-get update \
 COPY segmentation-service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Reuse the exact same segmentation script as the backend
-COPY backend/scripts/crop_item.py ./crop_item.py
+COPY segmentation-service/crop_item.py ./crop_item.py
 COPY segmentation-service/app.py ./app.py
 
 # Tiny U^2Net-p model (~4 MB) so the whole service stays well under 512 MB

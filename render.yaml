@@ -35,11 +35,12 @@ services:
         generateValue: true
 
   # Tiny Python service that only does the garment cutouts (fits in 512 MB on its own).
+  # Root Directory empty; Dockerfile Path = Dockerfile.segmenter
   - type: web
     name: maya-segmenter-jatyamanasvini
     runtime: docker
     plan: free
-    dockerfilePath: ./segmentation-service/Dockerfile
+    dockerfilePath: ./Dockerfile.segmenter
     healthCheckPath: /health
     envVars:
       - key: MAYA_SEG_MODEL
