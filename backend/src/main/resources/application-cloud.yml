@@ -47,9 +47,12 @@ weather:
   provider: ${WEATHER_PROVIDER:OPEN_METEO}
 
 # Garment isolation (Python + OpenCV + U^2Net) is enabled in the container image.
+# NOTE: it needs ~1 GB+ RAM. On Render's FREE 512 MB tier it can OOM-kill the app,
+# so it defaults to OFF for the cloud profile — set MAYA_SEGMENTATION_ENABLED=true
+# only on an instance with enough memory.
 maya:
   segmentation:
-    enabled: ${MAYA_SEGMENTATION_ENABLED:true}
+    enabled: ${MAYA_SEGMENTATION_ENABLED:false}
     python: ${MAYA_PYTHON:python3}
     script: ${MAYA_SEG_SCRIPT:scripts/crop_item.py}
 
