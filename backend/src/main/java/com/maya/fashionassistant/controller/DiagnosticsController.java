@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -37,6 +38,7 @@ public class DiagnosticsController {
     private final String chatModel;
     private final String visionModel;
     private final String fallbackModels;
+    private final boolean segmentationEnabled;
 
     public DiagnosticsController(
             @Value("${ai.base-url:https://api.openai.com/v1}") String baseUrl,
@@ -44,13 +46,15 @@ public class DiagnosticsController {
             @Value("${ai.provider:MOCK}") String provider,
             @Value("${ai.model:gpt-4o-mini}") String chatModel,
             @Value("${ai.vision-model:gpt-4o-mini}") String visionModel,
-            @Value("${ai.fallback-models:}") String fallbackModels) {
+            @Value("${ai.fallback-models:}") String fallbackModels,
+            @Value("${maya.segmentation.enabled:true}") boolean segmentationEnabled) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.provider = provider;
         this.chatModel = chatModel;
         this.visionModel = visionModel;
         this.fallbackModels = fallbackModels;
+        this.segmentationEnabled = segmentationEnabled;
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -58,13 +62,15 @@ public class DiagnosticsController {
     }
 
     @GetMapping("/ai")
-    public Map<String, Object> ai() {
+    public Map<String, Object> ai(
+            @RequestParam(value = "all", required = false, defaultValue = "false") boolean all) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("provider", provider);
         out.put("baseUrl", baseUrl);
         out.put("chatModel", chatModel);
         out.put("visionModel", visionModel);
         out.put("fallbackModels", fallbackModels);
+        out.put("segmentationEnabled", segmentationEnabled);
         out.put("apiKeyPresent", StringUtils.hasText(apiKey));
         out.put("apiKeyHint", StringUtils.hasText(apiKey)
                 ? apiKey.substring(0, Math.min(6, apiKey.length())) + "…(len=" + apiKey.length() + ")"
@@ -84,10 +90,14 @@ public class DiagnosticsController {
             out.put("note", "No API key configured — the app is running in MOCK mode.");
             return out;
         }
-        for (String candidate : candidates) {
+        List<String> toProbe = all ? candidates : candidates.subList(0, Math.min(1, candidates.size()));
+        for (String candidate : toProbe) {
             probes.add(probe(candidate));
         }
         out.put("probes", probes);
+        if (!all) {
+            out.put("note", "Probing only the primary model. Add ?all=true to test every fallback (uses more free-tier quota).");
+        }
         return out;
     }
 
