@@ -100,6 +100,27 @@ def sharpen(img: Image.Image) -> Image.Image:
     return img.filter(ImageFilter.UnsharpMask(radius=1.8, percent=140, threshold=3))
 
 
+def parse_bbox(bbox_raw, w, h):
+    """Parse 'x1,y1,x2,y2' into pixel coords, handling the three conventions
+    VLMs use: 0..1 fractions, 0..1000 normalized (Gemini/Qwen), or absolute pixels."""
+    try:
+        x1, y1, x2, y2 = (float(v) for v in bbox_raw.split(","))
+    except (ValueError, AttributeError):
+        return None
+    mx = max(x1, y1, x2, y2)
+    if mx <= 1.5:
+        px1, py1, px2, py2 = x1 * w, y1 * h, x2 * w, y2 * h
+    elif mx <= 1000 and (mx > w or mx > h):
+        px1, py1, px2, py2 = x1 * w / 1000.0, y1 * h / 1000.0, x2 * w / 1000.0, y2 * h / 1000.0
+    else:
+        px1, py1, px2, py2 = x1, y1, x2, y2
+    if px2 < px1:
+        px1, px2 = px2, px1
+    if py2 < py1:
+        py1, py2 = py2, py1
+    return px1, py1, px2, py2
+
+
 def main() -> int:
     if len(sys.argv) != 5:
         print("usage: crop_item.py <input> <x1,y1,x2,y2|-> <CATEGORY> <output>", file=sys.stderr)
@@ -127,15 +148,10 @@ def main() -> int:
     # 2. Salient segmentation on the bounding-box crop (shoes / bags / accessories)
     if result is None and bbox_raw not in ("-", "", "none"):
         try:
-            x1, y1, x2, y2 = (float(v) for v in bbox_raw.split(","))
-            if max(x1, y1, x2, y2) <= 1.5:
-                px1, py1, px2, py2 = x1 * w, y1 * h, x2 * w, y2 * h
-            else:
-                px1, py1, px2, py2 = x1, y1, x2, y2
-            if px2 < px1:
-                px1, px2 = px2, px1
-            if py2 < py1:
-                py1, py2 = py2, py1
+            box = parse_bbox(bbox_raw, w, h)
+            if box is None:
+                raise ValueError("bad bbox")
+            px1, py1, px2, py2 = box
             pad_x = (px2 - px1) * 0.12 + 6
             pad_y = (py2 - py1) * 0.12 + 6
             rx1, ry1 = int(max(0, px1 - pad_x)), int(max(0, py1 - pad_y))
@@ -158,17 +174,13 @@ def main() -> int:
 
     # 3. Fallback: plain crop of the bbox, else the whole image
     if result is None:
-        if bbox_raw not in ("-", "", "none"):
-            try:
-                x1, y1, x2, y2 = (float(v) for v in bbox_raw.split(","))
-                if max(x1, y1, x2, y2) <= 1.5:
-                    x1, y1, x2, y2 = x1 * w, y1 * h, x2 * w, y2 * h
-                result = base.crop((int(max(0, min(x1, x2))), int(max(0, min(y1, y2))),
-                                    int(min(w, max(x1, x2))), int(min(h, max(y1, y2)))))
-            except ValueError:
-                result = base
-        else:
+        box = parse_bbox(bbox_raw, w, h) if bbox_raw not in ("-", "", "none") else None
+        if box is None:
             result = base
+        else:
+            x1, y1, x2, y2 = box
+            result = base.crop((int(max(0, min(x1, x2))), int(max(0, min(y1, y2))),
+                                int(min(w, max(x1, x2))), int(min(h, max(y1, y2)))))
 
     if result.width < 16 or result.height < 16:
         result = base
