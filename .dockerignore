@@ -1,0 +1,14 @@
+# Keep the Docker build context small — never copy these into the image.
+.git
+.github
+.tools
+.env
+data
+uploads
+backend/uploads
+backend/target
+frontend/node_modules
+frontend/dist
+**/*.log
+.DS_Store
+docs

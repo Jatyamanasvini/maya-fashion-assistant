@@ -189,3 +189,36 @@ Without an `AI_API_KEY`, MAYA runs in **MOCK mode** — vision extraction return
 
 - [`docs/architecture.md`](docs/architecture.md) — system design.
 - [`docs/development-progress.md`](docs/development-progress.md) — phased progress and verification log.
+
+## Deployment (single container)
+
+The app ships as **one container**: Spring Boot serves the built React app on a single URL.
+
+- `Dockerfile` — multi-stage build (React → Spring Boot → JRE + Python/OpenCV).
+- `render.yaml` — one-click [Render](https://render.com) blueprint.
+- `backend/src/main/resources/application-cloud.yml` — cloud profile: built-in H2 file DB, Gemini AI, Pollinations images, Open-Meteo weather.
+
+**AI in the cloud is free via Google Gemini** (OpenAI-compatible, vision-capable). Get a key at
+<https://aistudio.google.com/apikey> and set `AI_API_KEY`.
+
+### Local
+```bash
+docker build -t maya .
+docker run -p 8080:8080 -e AI_API_KEY=<gemini-key> maya
+# open http://localhost:8080
+```
+
+### Render (free)
+1. Push this repo to GitHub (done).
+2. Render → **New → Blueprint** → select the repo (it reads `render.yaml`).
+3. Paste your `AI_API_KEY` when prompted → **Create**.
+
+### Any VPS
+The same image runs anywhere:
+```bash
+docker build -t maya .
+docker run -d -p 80:8080 -e AI_API_KEY=<key> -e JWT_SECRET=<random-long-string> maya
+```
+
+`SPRING_PROFILES_ACTIVE=cloud` is set inside the image via `render.yaml`; for plain `docker run`
+add `-e SPRING_PROFILES_ACTIVE=cloud`.

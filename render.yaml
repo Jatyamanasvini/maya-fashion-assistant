@@ -1,0 +1,25 @@
+# Render blueprint — one-click deploy of the single MAYA container.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After connecting the repo, set the AI_API_KEY secret in the Render dashboard
+# (get a free key at https://aistudio.google.com/apikey).
+services:
+  - type: web
+    name: maya-fashion-assistant
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      # Free Google Gemini key (vision + styling). Marked sync:false so Render
+      # prompts you for it instead of storing it in the repo.
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_VISION_MODEL
+        value: gemini-2.5-flash
+      - key: JWT_SECRET
+        generateValue: true

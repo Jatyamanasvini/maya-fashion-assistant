@@ -3,6 +3,12 @@ backend/target/
 frontend/dist/
 frontend/node_modules/
 
+# Frontend build copied into the backend for the single-container deploy
+backend/src/main/resources/static/
+
+# Runtime data (H2 db + uploads) for the cloud profile
+data/
+
 # Pinned local toolchain (do not commit binaries)
 .tools/
 

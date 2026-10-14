@@ -1,0 +1,55 @@
+# ============================================================
+# MAYA — cloud / production profile
+# ============================================================
+# Single-container deployment: Spring Boot serves the built React app and
+# talks to cloud AI (Gemini free tier) + Pollinations + Open-Meteo.
+#
+# Activate with:  SPRING_PROFILES_ACTIVE=cloud
+# Required env:   AI_API_KEY=<Gemini API key>   (from https://aistudio.google.com/apikey)
+# Optional env:   JWT_SECRET (Render can generate one), AI_MODEL, AI_VISION_MODEL
+# ============================================================
+
+server:
+  port: ${PORT:8080}
+
+spring:
+  # Self-contained file DB — no external database needed (data resets on redeploy).
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./data/maya;MODE=MySQL;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+storage:
+  location: ${IMAGE_STORAGE_PATH:./data/uploads}
+
+# AI: Gemini via its OpenAI-compatible endpoint (free tier, vision-capable).
+ai:
+  provider: ${AI_PROVIDER:OPENAI}
+  api-key: ${AI_API_KEY:}
+  base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
+  model: ${AI_MODEL:gemini-2.5-flash}
+  vision-model: ${AI_VISION_MODEL:gemini-2.5-flash}
+  image-gen:
+    provider: ${IMAGE_GENERATION_PROVIDER:POLLINATIONS}
+
+weather:
+  provider: ${WEATHER_PROVIDER:OPEN_METEO}
+
+# Garment isolation (Python + OpenCV + U^2Net) is enabled in the container image.
+maya:
+  segmentation:
+    enabled: ${MAYA_SEGMENTATION_ENABLED:true}
+    python: ${MAYA_PYTHON:python3}
+    script: ${MAYA_SEG_SCRIPT:scripts/crop_item.py}
+
+logging:
+  level:
+    root: INFO

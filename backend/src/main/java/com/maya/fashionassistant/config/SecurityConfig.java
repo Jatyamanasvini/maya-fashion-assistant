@@ -54,6 +54,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Public: auth endpoints, API docs, and the SPA itself
+                        // (the app shell contains no user data; data lives behind /api/**).
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/swagger-ui/**",
@@ -62,7 +64,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/error"
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        // Everything else under /api requires authentication.
+                        .requestMatchers("/api/**").authenticated()
+                        // Static frontend assets + client-side routes.
+                        .anyRequest().permitAll()
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
