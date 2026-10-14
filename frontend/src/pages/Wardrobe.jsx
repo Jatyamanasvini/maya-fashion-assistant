@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { AuthedImage } from '../components/AuthedImage';
-import { Shirt, UploadCloud, Search, Filter, Trash2, Tag, Sparkles } from 'lucide-react';
+import { Shirt, UploadCloud, Search, Filter, Trash2 } from 'lucide-react';
 
 const CATEGORIES = [
   'ALL',

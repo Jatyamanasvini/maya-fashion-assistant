@@ -51,4 +51,4 @@ COPY --from=backend /build/target/*.jar app.jar
 COPY backend/scripts ./scripts
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50", "-jar", "app.jar"]

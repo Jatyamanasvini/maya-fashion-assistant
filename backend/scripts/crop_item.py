@@ -121,8 +121,9 @@ def sharpen(img: Image.Image) -> Image.Image:
 
 
 def parse_bbox(bbox_raw, w, h):
-    """Parse 'x1,y1,x2,y2' into pixel coords, handling the three conventions
-    VLMs use: 0..1 fractions, 0..1000 normalized (Gemini/Qwen), or absolute pixels."""
+    """Parse 'x1,y1,x2,y2' into pixel coords.
+    We ask models for 0..1 fractions, but most VLMs (Gemini/Qwen) actually answer on a
+    0..1000 scale, so treat anything above 1.5 as the 0..1000 convention."""
     try:
         x1, y1, x2, y2 = (float(v) for v in bbox_raw.split(","))
     except (ValueError, AttributeError):
@@ -130,10 +131,12 @@ def parse_bbox(bbox_raw, w, h):
     mx = max(x1, y1, x2, y2)
     if mx <= 1.5:
         px1, py1, px2, py2 = x1 * w, y1 * h, x2 * w, y2 * h
-    elif mx <= 1000 and (mx > w or mx > h):
-        px1, py1, px2, py2 = x1 * w / 1000.0, y1 * h / 1000.0, x2 * w / 1000.0, y2 * h / 1000.0
     else:
-        px1, py1, px2, py2 = x1, y1, x2, y2
+        px1, py1, px2, py2 = x1 * w / 1000.0, y1 * h / 1000.0, x2 * w / 1000.0, y2 * h / 1000.0
+    px1 = min(max(px1, 0.0), w)
+    px2 = min(max(px2, 0.0), w)
+    py1 = min(max(py1, 0.0), h)
+    py2 = min(max(py2, 0.0), h)
     if px2 < px1:
         px1, px2 = px2, px1
     if py2 < py1:

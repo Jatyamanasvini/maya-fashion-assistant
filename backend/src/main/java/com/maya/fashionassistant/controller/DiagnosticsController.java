@@ -39,6 +39,7 @@ public class DiagnosticsController {
     private final String visionModel;
     private final String fallbackModels;
     private final boolean segmentationEnabled;
+    private final String segmentationRemoteUrl;
 
     public DiagnosticsController(
             @Value("${ai.base-url:https://api.openai.com/v1}") String baseUrl,
@@ -47,7 +48,8 @@ public class DiagnosticsController {
             @Value("${ai.model:gpt-4o-mini}") String chatModel,
             @Value("${ai.vision-model:gpt-4o-mini}") String visionModel,
             @Value("${ai.fallback-models:}") String fallbackModels,
-            @Value("${maya.segmentation.enabled:true}") boolean segmentationEnabled) {
+            @Value("${maya.segmentation.enabled:true}") boolean segmentationEnabled,
+            @Value("${maya.segmentation.remote-url:}") String segmentationRemoteUrl) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.provider = provider;
@@ -55,6 +57,7 @@ public class DiagnosticsController {
         this.visionModel = visionModel;
         this.fallbackModels = fallbackModels;
         this.segmentationEnabled = segmentationEnabled;
+        this.segmentationRemoteUrl = segmentationRemoteUrl;
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -71,6 +74,7 @@ public class DiagnosticsController {
         out.put("visionModel", visionModel);
         out.put("fallbackModels", fallbackModels);
         out.put("segmentationEnabled", segmentationEnabled);
+        out.put("segmentationRemote", StringUtils.hasText(segmentationRemoteUrl) ? segmentationRemoteUrl : null);
         out.put("apiKeyPresent", StringUtils.hasText(apiKey));
         out.put("apiKeyHint", StringUtils.hasText(apiKey)
                 ? apiKey.substring(0, Math.min(6, apiKey.length())) + "…(len=" + apiKey.length() + ")"

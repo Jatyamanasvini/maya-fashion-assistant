@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Calendar, Sparkles, LogOut, ShieldCheck } from 'lucide-react';
+import { Mail, Sparkles, LogOut, ShieldCheck } from 'lucide-react';
 
 export const Profile = () => {
   const { user, logout } = useAuth();

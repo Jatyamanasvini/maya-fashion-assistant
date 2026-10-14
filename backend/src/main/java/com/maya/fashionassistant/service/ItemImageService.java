@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -19,6 +20,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +51,7 @@ public class ItemImageService {
     private final String remoteUrl;
     private final String pythonExecutable;
     private final String scriptPath;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
 
     public ItemImageService(
             ImageStorageService imageStorageService,
@@ -62,6 +64,11 @@ public class ItemImageService {
         this.remoteUrl = remoteUrl;
         this.pythonExecutable = pythonExecutable;
         this.scriptPath = scriptPath;
+        // Timeouts matter: the remote segmenter sleeps on free hosting and cold-starts.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofSeconds(90));
+        this.restClient = RestClient.builder().requestFactory(factory).build();
     }
 
     public String createItemImage(String sourceStoragePath, List<Double> bbox, String category) {

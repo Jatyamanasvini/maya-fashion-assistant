@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { AuthedImage } from '../components/AuthedImage';
-import { Shirt, Scissors, Sparkles, ArrowLeft, Calendar, Image as ImageIcon } from 'lucide-react';
+import { Scissors, ArrowLeft, Calendar } from 'lucide-react';
 
 export const OutfitDetails = () => {
   const { id } = useParams();

@@ -11,7 +11,6 @@ import {
   Scissors,
   CloudSun,
   MapPin,
-  RefreshCw,
   Image as ImageIcon,
   ShoppingBag,
 } from 'lucide-react';

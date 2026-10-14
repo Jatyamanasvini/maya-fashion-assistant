@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { UploadCloud, CheckCircle2, Sparkles, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
 
 export const UploadPhotos = () => {
   const [selectedFile, setSelectedFile] = useState(null);
