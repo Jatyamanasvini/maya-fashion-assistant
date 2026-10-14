@@ -6,6 +6,7 @@ import com.maya.fashionassistant.dto.ai.OutfitSelectionItem;
 import com.maya.fashionassistant.dto.ai.OutfitSelectionResponse;
 import com.maya.fashionassistant.dto.chat.ChatReplyResponse;
 import com.maya.fashionassistant.dto.outfit.OutfitResponse;
+import com.maya.fashionassistant.dto.shopping.ShoppingSuggestion;
 import com.maya.fashionassistant.dto.weather.WeatherInfo;
 import com.maya.fashionassistant.entity.ItemCategory;
 import com.maya.fashionassistant.entity.MessageRole;
@@ -62,6 +63,7 @@ public class StylingService {
     private final ChatAiClient chatAiClient;
     private final ImageGenerationClient imageGenerationClient;
     private final OutfitVisualizationService outfitVisualizationService;
+    private final ShoppingSuggestionService shoppingSuggestionService;
     private final String visualizationMode;
 
     public StylingService(
@@ -75,6 +77,7 @@ public class StylingService {
             ChatAiClient chatAiClient,
             ImageGenerationClient imageGenerationClient,
             OutfitVisualizationService outfitVisualizationService,
+            ShoppingSuggestionService shoppingSuggestionService,
             @Value("${maya.visualization.mode:COMPOSITE}") String visualizationMode) {
         this.wardrobeItemRepository = wardrobeItemRepository;
         this.outfitRepository = outfitRepository;
@@ -86,6 +89,7 @@ public class StylingService {
         this.chatAiClient = chatAiClient;
         this.imageGenerationClient = imageGenerationClient;
         this.outfitVisualizationService = outfitVisualizationService;
+        this.shoppingSuggestionService = shoppingSuggestionService;
         this.visualizationMode = visualizationMode;
     }
 
@@ -97,20 +101,22 @@ public class StylingService {
         // 2. Extract intent deterministically
         StylingIntent intent = intentExtractor.extract(message);
 
-        // 3. Retrieve the user's actual wardrobe
+        // 3. Weather / context (best-effort)
+        WeatherInfo weather = weatherService.getWeather(latitude, longitude);
+
+        // 4. Retrieve the user's actual wardrobe
         List<WardrobeItem> wardrobe = wardrobeItemRepository.findByUserIdOrderByCreatedAtDesc(userId);
 
         if (wardrobe == null || wardrobe.isEmpty()) {
-            String reply = "I don't see any items in your wardrobe yet. Upload a few photos of your clothes and I'll start styling complete looks for you!";
+            String reply = "You don't have any items in your wardrobe yet, so I can't style an outfit from your closet. "
+                    + "Here are some pieces I'd suggest to build this look — or upload photos of your own clothes and I'll style those instead!";
+            List<ShoppingSuggestion> suggestions = shoppingSuggestionService.suggest(message, intent);
             conversationService.saveMessage(conversationId, MessageRole.ASSISTANT, reply);
-            return new ChatReplyResponse(reply, null, null);
+            return new ChatReplyResponse(reply, null, weather, suggestions);
         }
 
-        // 4. Previous outfit in this conversation (for refinement / "another option")
+        // 5. Previous outfit in this conversation (for refinement / "another option")
         List<Long> previousItemIds = previousOutfitItemIds(conversationId);
-
-        // 5. Weather / context (best-effort)
-        WeatherInfo weather = weatherService.getWeather(latitude, longitude);
 
         // 6. AI selection, then deterministic fallback, then ownership validation
         OutfitSelectionResponse aiSelection = chatAiClient.selectOutfit(wardrobe, intent, previousItemIds);
@@ -127,19 +133,25 @@ public class StylingService {
                 .map(item -> new OutfitService.OutfitSelection(item.getWardrobeItemId(), item.getRole()))
                 .collect(Collectors.toList());
 
-        OutfitResponse outfitResponse;
-        if (outfitSelections.isEmpty()) {
-            outfitResponse = null;
-        } else {
+        OutfitResponse outfitResponse = null;
+        if (!outfitSelections.isEmpty()) {
             String generatedImagePath = generateVisualization(selection, hairstyle, intent, weather, wardrobe);
             outfitResponse = outfitService.createOutfit(userId, conversationId, hairstyle, reason, outfitSelections, generatedImagePath);
         }
 
-        // 8. Compose and persist the assistant reply
-        String reply = composeReply(outfitResponse, intent, weather);
+        // 8. Compose and persist the assistant reply (offer "shop this" ideas when no look was possible)
+        String reply;
+        List<ShoppingSuggestion> suggestions = null;
+        if (outfitResponse == null) {
+            reply = "I couldn't build a complete look from your current wardrobe. Here are some pieces that would work — "
+                    + "or upload more of your clothes and I'll style them.";
+            suggestions = shoppingSuggestionService.suggest(message, intent);
+        } else {
+            reply = composeReply(outfitResponse, intent, weather);
+        }
         conversationService.saveMessage(conversationId, MessageRole.ASSISTANT, reply);
 
-        return new ChatReplyResponse(reply, outfitResponse, weather);
+        return new ChatReplyResponse(reply, outfitResponse, weather, suggestions);
     }
 
     private List<Long> previousOutfitItemIds(Long conversationId) {

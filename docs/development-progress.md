@@ -104,6 +104,14 @@ Replaced GrabCut with real learned models run locally via onnxruntime (still $0)
 
 **Verified on a real photo:** the white turtleneck and blue jeans now produce clean, sharp product shots on white. **Remaining limitation:** white shoes on a light floor still fall back to a plain crop — that needs a shoe-specific model or SAM.
 
+### [Feature] "Shop this" suggestions when the wardrobe can't fulfil a request
+When the user has no items (or no complete look is possible), Maya now suggests pieces **to buy** instead of only saying "upload photos":
+- `ShoppingSuggestionService` asks the AI for 4 ideas (category/title/reason/search query).
+- A free, keyless **Openverse** image search finds a real photo for each; a Pollinations illustration is the fallback.
+- Suggestions are clearly labelled "you don't own these yet" and are kept separate from owned-item outfits (the core ownership rule is unchanged).
+
+**Speed:** verified that the slow part is the CPU vision step (~60–90 s: image encode ~19 s + prompt eval ~58 s + generation). Mitigations applied: model kept warm (`OLLAMA_KEEP_ALIVE=-1`), output capped (`max_tokens`), uploads downscaled to 1024 px.
+
 ---
 
 ## How to run

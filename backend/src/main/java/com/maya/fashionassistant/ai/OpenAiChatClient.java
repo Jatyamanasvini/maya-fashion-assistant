@@ -3,6 +3,8 @@ package com.maya.fashionassistant.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maya.fashionassistant.dto.ai.OutfitSelectionResponse;
+import com.maya.fashionassistant.dto.ai.ShoppingIdea;
+import com.maya.fashionassistant.dto.ai.ShoppingIdeaResponse;
 import com.maya.fashionassistant.entity.WardrobeItem;
 import com.maya.fashionassistant.exception.AiServiceException;
 import com.maya.fashionassistant.service.StylingIntent;
@@ -125,6 +127,59 @@ public class OpenAiChatClient implements ChatAiClient {
         } catch (Exception e) {
             log.warn("Outfit ranking AI call failed: {}", e.getMessage());
             return null;
+        }
+    }
+
+    @Override
+    public List<ShoppingIdea> suggestShoppingIdeas(String userMessage, StylingIntent intent) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return List.of();
+        }
+
+        String systemPrompt = """
+                You are Maya, a personal stylist. The user has NO wardrobe items yet.
+                Suggest 4 specific pieces to buy that together would create a great look for their request.
+                Return ONLY JSON matching: {"items":[{"category":"TOP","title":"Cropped black blazer","reason":"Adds polish to a casual look.","query":"women cropped black blazer"}]}
+                Rules:
+                - category is exactly ONE of: TOP, BOTTOM, DRESS, OUTERWEAR, SHOES, BAG, ACCESSORY, JEWELRY.
+                - query is a short image-search phrase (3-6 words).
+                - reason is ONE short sentence.
+                - Output JSON only.
+                """;
+
+        String userPrompt = "Styling request: " + (userMessage == null || userMessage.isBlank()
+                ? "a stylish everyday outfit" : userMessage);
+
+        Map<String, Object> requestBody = Map.of(
+                "model", model,
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)),
+                "response_format", Map.of("type", "json_object"),
+                "temperature", 0.4
+        );
+
+        try {
+            String responseBody = restClient.post()
+                    .uri("/chat/completions")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            if (responseBody == null || responseBody.isBlank()) {
+                return List.of();
+            }
+            JsonNode choices = objectMapper.readTree(responseBody).path("choices");
+            if (choices.isEmpty()) {
+                return List.of();
+            }
+            String content = choices.get(0).path("message").path("content").asText();
+            ShoppingIdeaResponse parsed = objectMapper.readValue(content, ShoppingIdeaResponse.class);
+            return parsed.getItems() != null ? parsed.getItems() : List.of();
+        } catch (Exception e) {
+            log.warn("Shopping suggestion AI call failed: {}", e.getMessage());
+            return List.of();
         }
     }
 

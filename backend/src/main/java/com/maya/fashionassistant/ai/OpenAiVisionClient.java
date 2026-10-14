@@ -104,6 +104,7 @@ public class OpenAiVisionClient implements VisionAiClient {
         requestBody.put("messages", List.of(systemMessage, userMessage));
         requestBody.put("response_format", Map.of("type", "json_object"));
         requestBody.put("temperature", 0.2);
+        requestBody.put("max_tokens", 900);
 
         try {
             String responseBody = restClient.post()

@@ -18,7 +18,7 @@ export const UploadPhotos = () => {
    * produce WebP/HEIC, which Java's ImageIO cannot decode. We normalize whatever the
    * browser can decode into a downscaled JPEG here (also speeds up local inference).
    */
-  const normalizeToJpeg = (file, maxDim = 1280) =>
+  const normalizeToJpeg = (file, maxDim = 1024) =>
     new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
       const img = new Image();

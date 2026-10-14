@@ -1,13 +1,17 @@
 package com.maya.fashionassistant.dto.chat;
 
 import com.maya.fashionassistant.dto.outfit.OutfitResponse;
+import com.maya.fashionassistant.dto.shopping.ShoppingSuggestion;
 import com.maya.fashionassistant.dto.weather.WeatherInfo;
+
+import java.util.List;
 
 public class ChatReplyResponse {
 
     private String reply;
     private OutfitResponse outfit;
     private WeatherInfo weather;
+    private List<ShoppingSuggestion> suggestions;
 
     public ChatReplyResponse() {
     }
@@ -16,6 +20,22 @@ public class ChatReplyResponse {
         this.reply = reply;
         this.outfit = outfit;
         this.weather = weather;
+    }
+
+    public ChatReplyResponse(String reply, OutfitResponse outfit, WeatherInfo weather,
+                             List<ShoppingSuggestion> suggestions) {
+        this.reply = reply;
+        this.outfit = outfit;
+        this.weather = weather;
+        this.suggestions = suggestions;
+    }
+
+    public List<ShoppingSuggestion> getSuggestions() {
+        return suggestions;
+    }
+
+    public void setSuggestions(List<ShoppingSuggestion> suggestions) {
+        this.suggestions = suggestions;
     }
 
     public String getReply() {

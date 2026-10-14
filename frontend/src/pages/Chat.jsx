@@ -13,6 +13,7 @@ import {
   MapPin,
   RefreshCw,
   Image as ImageIcon,
+  ShoppingBag,
 } from 'lucide-react';
 
 export const Chat = () => {
@@ -148,6 +149,7 @@ export const Chat = () => {
         content: res.data.reply,
         outfit: res.data.outfit,
         weather: res.data.weather,
+        suggestions: res.data.suggestions,
         createdAt: new Date().toISOString(),
       };
 
@@ -450,6 +452,62 @@ export const Chat = () => {
                       >
                         Another option
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Shopping suggestions (items the user does NOT own yet) */}
+                {msg.suggestions && msg.suggestions.length > 0 && (
+                  <div
+                    className="card"
+                    style={{
+                      marginTop: '0.8rem',
+                      maxWidth: '85%',
+                      borderColor: '#e0e7ff',
+                      backgroundColor: '#fbfcff',
+                      padding: '1.1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                      <ShoppingBag size={16} color="var(--primary)" />
+                      <strong style={{ fontSize: '0.92rem' }}>Style ideas to shop</strong>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        (you don't own these yet)
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                      {msg.suggestions.map((s, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-sm)',
+                            overflow: 'hidden',
+                            backgroundColor: '#ffffff',
+                          }}
+                        >
+                          <img
+                            src={s.imageUrl}
+                            alt={s.title}
+                            style={{ width: '100%', height: '150px', objectFit: 'cover', backgroundColor: '#f7f7f7', display: 'block' }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.visibility = 'hidden';
+                            }}
+                          />
+                          <div style={{ padding: '0.6rem 0.7rem' }}>
+                            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>
+                              {s.category}
+                            </div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                              {s.title}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                              {s.reason}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

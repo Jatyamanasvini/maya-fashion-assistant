@@ -16,6 +16,7 @@ import com.maya.fashionassistant.service.ImageStorageService;
 import com.maya.fashionassistant.service.IntentExtractor;
 import com.maya.fashionassistant.service.OutfitService;
 import com.maya.fashionassistant.service.OutfitVisualizationService;
+import com.maya.fashionassistant.service.ShoppingSuggestionService;
 import com.maya.fashionassistant.service.StylingService;
 import com.maya.fashionassistant.service.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,8 @@ class StylingServiceTest {
     private ImageGenerationClient imageGenerationClient;
     @Mock
     private OutfitVisualizationService outfitVisualizationService;
+    @Mock
+    private ShoppingSuggestionService shoppingSuggestionService;
 
     private StylingService stylingService;
 
@@ -65,7 +68,7 @@ class StylingServiceTest {
         stylingService = new StylingService(
                 wardrobeItemRepository, outfitRepository, conversationService, outfitService,
                 intentExtractor, weatherService, imageStorageService, chatAiClient,
-                imageGenerationClient, outfitVisualizationService, "COMPOSITE");
+                imageGenerationClient, outfitVisualizationService, shoppingSuggestionService, "COMPOSITE");
     }
 
     private WardrobeItem item(Long id, ItemCategory category, String desc) {
