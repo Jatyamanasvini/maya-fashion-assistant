@@ -38,8 +38,8 @@ export const Dashboard = () => {
       <div
         className="card"
         style={{
-          background: 'linear-gradient(135deg, #fcf4f2 0%, #ffffff 100%)',
-          borderColor: '#ebd8d4',
+          background: 'linear-gradient(135deg, #ffeaf3 0%, #f3f0ff 100%)',
+          borderColor: '#f7dcea',
           marginBottom: '2rem',
           padding: '2.5rem 2rem',
         }}
@@ -78,7 +78,7 @@ export const Dashboard = () => {
         </div>
 
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <div style={{ padding: '1rem', background: '#fef3c7', borderRadius: 'var(--radius-md)', color: '#d97706' }}>
+          <div style={{ padding: '1rem', background: '#fff1dc', borderRadius: 'var(--radius-md)', color: '#c98a3c' }}>
             <Sparkles size={28} />
           </div>
           <div>
@@ -88,7 +88,7 @@ export const Dashboard = () => {
         </div>
 
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <div style={{ padding: '1rem', background: '#e0e7ff', borderRadius: 'var(--radius-md)', color: '#4338ca' }}>
+          <div style={{ padding: '1rem', background: '#f0e9ff', borderRadius: 'var(--radius-md)', color: '#8b6fc9' }}>
             <Heart size={28} />
           </div>
           <div>

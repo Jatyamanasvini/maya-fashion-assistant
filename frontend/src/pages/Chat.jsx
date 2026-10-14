@@ -361,8 +361,8 @@ export const Chat = () => {
                     style={{
                       marginTop: '0.8rem',
                       maxWidth: '85%',
-                      borderColor: '#ebd8d4',
-                      backgroundColor: '#fffcfb',
+                      borderColor: '#f7dcea',
+                      backgroundColor: '#fff9fc',
                       padding: '1.25rem',
                     }}
                   >
@@ -463,8 +463,8 @@ export const Chat = () => {
                     style={{
                       marginTop: '0.8rem',
                       maxWidth: '85%',
-                      borderColor: '#e0e7ff',
-                      backgroundColor: '#fbfcff',
+                      borderColor: '#e6dcff',
+                      backgroundColor: '#fbf8ff',
                       padding: '1.1rem',
                     }}
                   >

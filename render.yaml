@@ -26,7 +26,10 @@ services:
       - key: AI_REASONING_EFFORT
         value: low
       # Garment cutouts need ~1GB+ RAM; off on the free 512MB tier to avoid OOM crashes.
+      # To enable on a bigger instance: set true and keep MAYA_SEG_MODEL=lite (small model).
       - key: MAYA_SEGMENTATION_ENABLED
         value: "false"
+      - key: MAYA_SEG_MODEL
+        value: lite
       - key: JWT_SECRET
         generateValue: true

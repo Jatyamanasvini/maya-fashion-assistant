@@ -28,19 +28,18 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 RUN python3 -m venv /opt/venv \
  && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/venv/bin/pip install --no-cache-dir opencv-python-headless onnxruntime pillow numpy
+ && /opt/venv/bin/pip install --no-cache-dir onnxruntime pillow numpy
 ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 COPY --from=backend /build/target/*.jar app.jar
 COPY backend/scripts ./scripts
 
-# U^2Net models for garment isolation (checksum-verified upstream releases)
+# U^2Net-p model for (optional) garment isolation — tiny (~4 MB) so it fits small hosts.
+# Full-quality models live in .tools/models for local development.
 RUN mkdir -p /app/models \
- && curl -L --fail -o /app/models/u2net.onnx \
-      https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx \
- && curl -L --fail -o /app/models/u2net_cloth_seg.onnx \
-      https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_cloth_seg.onnx
+ && curl -L --fail -o /app/models/u2netp.onnx \
+      https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx
 ENV MAYA_MODEL_DIR=/app/models
 
 EXPOSE 8080

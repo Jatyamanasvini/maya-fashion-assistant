@@ -24,8 +24,22 @@ _MEAN = (0.485, 0.456, 0.406)
 _STD = (0.229, 0.224, 0.225)
 _CLASS_BY_CATEGORY = {"TOP": 1, "OUTERWEAR": 1, "BOTTOM": 2, "DRESS": 3}
 
+# "lite" mode uses the small U^2Net-p model (a few MB instead of ~176 MB) so it can run
+# on low-memory hosts (e.g. Render's free 512 MB tier). Quality is a bit lower.
+LITE = os.environ.get("MAYA_SEG_MODEL", "").strip().lower() == "lite"
+
+
+def _salient_model_name():
+    order = ["u2netp.onnx", "u2net.onnx"] if LITE else ["u2net.onnx", "u2netp.onnx"]
+    for name in order:
+        if find_model(name):
+            return name
+    return None
+
 
 def find_model(filename: str) -> str | None:
+    if not filename:
+        return None
     env = os.environ.get("MAYA_MODEL_DIR")
     candidates = [
         os.path.join(env, filename) if env else None,
@@ -47,7 +61,13 @@ def load_session(filename: str):
     try:
         import onnxruntime as ort
 
-        return ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        opts = ort.SessionOptions()
+        # Lower RSS for small hosts: no memory arena, single-threaded, no graph optimizations reuse.
+        opts.enable_cpu_mem_arena = False
+        opts.enable_mem_pattern = False
+        opts.intra_op_num_threads = 1
+        opts.inter_op_num_threads = 1
+        return ort.InferenceSession(path, sess_options=opts, providers=["CPUExecutionProvider"])
     except Exception as exc:  # noqa: BLE001
         print(f"failed to load {filename}: {exc}", file=sys.stderr)
         return None
@@ -138,7 +158,7 @@ def main() -> int:
     result = None
 
     # 1. Category segmentation (tops / bottoms / dresses) — no bbox required
-    if cls is not None:
+    if cls is not None and not LITE:
         session = load_session("u2net_cloth_seg.onnx")
         if session is not None:
             alpha = cloth_class_alpha(session, base, cls)
@@ -158,7 +178,7 @@ def main() -> int:
             rx2, ry2 = int(min(w, px2 + pad_x)), int(min(h, py2 + pad_y))
             if rx2 - rx1 >= 16 and ry2 - ry1 >= 16:
                 crop = base.crop((rx1, ry1, rx2, ry2))
-                session = load_session("u2net.onnx")
+                session = load_session(_salient_model_name())
                 if session is not None:
                     alpha = salient_alpha(session, crop)
                     a = np.array(alpha).astype(np.float32) / 255.0
