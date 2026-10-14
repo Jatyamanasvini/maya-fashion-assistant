@@ -31,12 +31,15 @@ storage:
   location: ${IMAGE_STORAGE_PATH:./data/uploads}
 
 # AI: Gemini via its OpenAI-compatible endpoint (free tier, vision-capable).
+# Note: Google restricts older models (e.g. gemini-2.5-*) to existing users, so we
+# default to current models and also try fallbacks if one is unavailable.
 ai:
   provider: ${AI_PROVIDER:OPENAI}
   api-key: ${AI_API_KEY:}
   base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
-  model: ${AI_MODEL:gemini-2.5-flash}
-  vision-model: ${AI_VISION_MODEL:gemini-2.5-flash}
+  model: ${AI_MODEL:gemini-3.8-flash}
+  vision-model: ${AI_VISION_MODEL:gemini-3.8-flash}
+  fallback-models: ${AI_FALLBACK_MODELS:gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-2.5-flash}
   image-gen:
     provider: ${IMAGE_GENERATION_PROVIDER:POLLINATIONS}
 

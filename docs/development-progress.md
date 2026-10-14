@@ -112,6 +112,10 @@ When the user has no items (or no complete look is possible), Maya now suggests 
 
 **Speed:** verified that the slow part is the CPU vision step (~60–90 s: image encode ~19 s + prompt eval ~58 s + generation). Mitigations applied: model kept warm (`OLLAMA_KEEP_ALIVE=-1`), output capped (`max_tokens`), uploads downscaled to 1024 px.
 
+### [Deployment] Single-container cloud deploy + Gemini model fix
+- Added a **single-container** deployment (Spring Boot serves the built React app): `Dockerfile`, `.dockerignore`, `render.yaml`, and `application-cloud.yml` (built-in H2 file DB + Gemini AI + Pollinations + Open-Meteo). Added an SPA fallback (`WebConfig`) and fixed Spring Security so the frontend loads while `/api/**` stays protected.
+- **Deployment bug found:** the cloud profile defaulted to `gemini-2.5-flash`, but Google now restricts the 2.5 models to existing users, so uploads failed on new keys. Switched the default to `gemini-3.8-flash` with a configurable **fallback list**, made the AI clients tolerant of providers that reject JSON mode, and they now log the provider's response body on failure.
+
 ---
 
 ## How to run

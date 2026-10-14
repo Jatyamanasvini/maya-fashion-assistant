@@ -6,7 +6,6 @@ import com.maya.fashionassistant.dto.ai.OutfitSelectionResponse;
 import com.maya.fashionassistant.dto.ai.ShoppingIdea;
 import com.maya.fashionassistant.dto.ai.ShoppingIdeaResponse;
 import com.maya.fashionassistant.entity.WardrobeItem;
-import com.maya.fashionassistant.exception.AiServiceException;
 import com.maya.fashionassistant.service.StylingIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,15 +14,20 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * OpenAI-backed outfit ranking client. Uses the Chat Completions API with a
- * JSON response format. The returned wardrobe item IDs are treated as untrusted
- * and re-validated by the backend.
+ * OpenAI-compatible client for outfit ranking and shopping suggestions.
+ *
+ * <p>Resilient to provider churn: tries the configured model plus fallbacks, tolerates
+ * providers that reject JSON mode, and logs the provider's response body on failure so
+ * deployment logs are actionable. Returned wardrobe IDs are still re-validated by the
+ * backend (this client never has the final say on ownership).</p>
  */
 @Component
 public class OpenAiChatClient implements ChatAiClient {
@@ -32,17 +36,18 @@ public class OpenAiChatClient implements ChatAiClient {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final String model;
     private final String apiKey;
+    private final List<String> models;
 
     public OpenAiChatClient(
             @Value("${ai.base-url:https://api.openai.com/v1}") String baseUrl,
             @Value("${ai.api-key:}") String apiKey,
             @Value("${ai.model:gpt-4o-mini}") String model,
+            @Value("${ai.fallback-models:}") String fallbackModels,
             ObjectMapper objectMapper) {
         this.apiKey = apiKey;
-        this.model = model;
         this.objectMapper = objectMapper;
+        this.models = AiModelCandidates.build(model, fallbackModels);
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -51,10 +56,7 @@ public class OpenAiChatClient implements ChatAiClient {
 
     @Override
     public OutfitSelectionResponse selectOutfit(List<WardrobeItem> wardrobe, StylingIntent intent, List<Long> previousItemIds) {
-        if (apiKey == null || apiKey.isBlank()) {
-            return null;
-        }
-        if (wardrobe == null || wardrobe.isEmpty()) {
+        if (apiKey == null || apiKey.isBlank() || wardrobe == null || wardrobe.isEmpty()) {
             return null;
         }
 
@@ -91,43 +93,10 @@ public class OpenAiChatClient implements ChatAiClient {
                 - Every wardrobeItemId MUST come from the provided list.
                 """;
 
-        String userPrompt = buildUserPrompt(intent, previousItemIds);
+        String userPrompt = "Here is the user's actual wardrobe:\n[\n" + wardrobeListing + "\n]\n\n"
+                + buildUserPrompt(intent, previousItemIds);
 
-        Map<String, Object> systemMessage = Map.of("role", "system", "content", systemPrompt);
-        Map<String, Object> userMessage = Map.of("role", "user", "content",
-                "Here is the user's actual wardrobe:\n[\n" + wardrobeListing + "\n]\n\n" + userPrompt);
-
-        Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "messages", List.of(systemMessage, userMessage),
-                "response_format", Map.of("type", "json_object"),
-                "temperature", 0.3
-        );
-
-        try {
-            String responseBody = restClient.post()
-                    .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
-
-            if (responseBody == null || responseBody.isBlank()) {
-                return null;
-            }
-
-            JsonNode rootNode = objectMapper.readTree(responseBody);
-            JsonNode choices = rootNode.path("choices");
-            if (choices.isEmpty()) {
-                return null;
-            }
-
-            String contentString = choices.get(0).path("message").path("content").asText();
-            return objectMapper.readValue(contentString, OutfitSelectionResponse.class);
-        } catch (Exception e) {
-            log.warn("Outfit ranking AI call failed: {}", e.getMessage());
-            return null;
-        }
+        return callJson(systemPrompt, userPrompt, 0.3, OutfitSelectionResponse.class);
     }
 
     @Override
@@ -150,36 +119,76 @@ public class OpenAiChatClient implements ChatAiClient {
         String userPrompt = "Styling request: " + (userMessage == null || userMessage.isBlank()
                 ? "a stylish everyday outfit" : userMessage);
 
-        Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", userPrompt)),
-                "response_format", Map.of("type", "json_object"),
-                "temperature", 0.4
-        );
+        ShoppingIdeaResponse parsed = callJson(systemPrompt, userPrompt, 0.4, ShoppingIdeaResponse.class);
+        return parsed != null && parsed.getItems() != null ? parsed.getItems() : List.of();
+    }
 
+    /**
+     * Calls the chat endpoint, trying each candidate model and, when a provider rejects
+     * JSON mode, retrying once without it. Returns {@code null} if everything fails.
+     */
+    private <T> T callJson(String systemPrompt, String userPrompt, double temperature, Class<T> type) {
+        Exception last = null;
+        for (String candidate : models) {
+            try {
+                return attempt(candidate, true, systemPrompt, userPrompt, temperature, type);
+            } catch (RestClientResponseException e) {
+                String body = safeBody(e);
+                log.warn("Chat model '{}' failed: {} {}", candidate, e.getStatusCode(), body);
+                last = e;
+                if (AiModelCandidates.looksLikeFormatError(body)) {
+                    try {
+                        return attempt(candidate, false, systemPrompt, userPrompt, temperature, type);
+                    } catch (Exception retry) {
+                        log.warn("Chat model '{}' (no json mode) failed: {}", candidate, retry.getMessage());
+                        last = retry;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Chat model '{}' error: {}", candidate, e.getMessage());
+                last = e;
+            }
+        }
+        log.warn("All chat models failed: {}", last != null ? last.getMessage() : "no models configured");
+        return null;
+    }
+
+    private <T> T attempt(String model, boolean jsonMode, String systemPrompt, String userPrompt,
+                          double temperature, Class<T> type) throws Exception {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)));
+        if (jsonMode) {
+            requestBody.put("response_format", Map.of("type", "json_object"));
+        }
+        requestBody.put("temperature", temperature);
+
+        String responseBody = restClient.post()
+                .uri("/chat/completions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .body(requestBody)
+                .retrieve()
+                .body(String.class);
+
+        if (responseBody == null || responseBody.isBlank()) {
+            return null;
+        }
+        JsonNode choices = objectMapper.readTree(responseBody).path("choices");
+        if (choices.isEmpty()) {
+            return null;
+        }
+        String content = AiModelCandidates.extractJson(choices.get(0).path("message").path("content").asText());
+        return objectMapper.readValue(content, type);
+    }
+
+    private String safeBody(RestClientResponseException e) {
         try {
-            String responseBody = restClient.post()
-                    .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
-
-            if (responseBody == null || responseBody.isBlank()) {
-                return List.of();
-            }
-            JsonNode choices = objectMapper.readTree(responseBody).path("choices");
-            if (choices.isEmpty()) {
-                return List.of();
-            }
-            String content = choices.get(0).path("message").path("content").asText();
-            ShoppingIdeaResponse parsed = objectMapper.readValue(content, ShoppingIdeaResponse.class);
-            return parsed.getItems() != null ? parsed.getItems() : List.of();
-        } catch (Exception e) {
-            log.warn("Shopping suggestion AI call failed: {}", e.getMessage());
-            return List.of();
+            String body = e.getResponseBodyAsString();
+            return body == null ? "" : body.substring(0, Math.min(body.length(), 500));
+        } catch (Exception ignored) {
+            return "";
         }
     }
 
