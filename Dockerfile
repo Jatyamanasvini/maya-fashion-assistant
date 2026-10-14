@@ -21,26 +21,34 @@ COPY backend/src ./src
 COPY --from=frontend /fe/dist ./src/main/resources/static
 RUN mvn -q -B -DskipTests package
 
-# ---------- 3. Runtime: JRE + Python/OpenCV + segmentation models ----------
+# ---------- 3. Runtime: JRE (+ OPTIONAL Python for garment cutouts) ----------
 FROM eclipse-temurin:21-jre
+
+# Garment cutouts need Python + ~340 MB RAM at runtime, which OOM-kills Render's free
+# 512 MB tier. They are therefore OFF by default — the image ships JVM-only so uploads
+# can never crash the app. Enable on a bigger instance with:
+#     docker build --build-arg INSTALL_SEGMENTATION=true .
+ARG INSTALL_SEGMENTATION=false
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 python3-venv curl \
- && rm -rf /var/lib/apt/lists/*
-RUN python3 -m venv /opt/venv \
- && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/venv/bin/pip install --no-cache-dir onnxruntime pillow numpy
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && if [ "$INSTALL_SEGMENTATION" = "true" ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends python3 python3-venv \
+      && rm -rf /var/lib/apt/lists/* \
+      && python3 -m venv /opt/venv \
+      && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+      && /opt/venv/bin/pip install --no-cache-dir onnxruntime pillow numpy \
+      && mkdir -p /app/models \
+      && curl -L --fail -o /app/models/u2netp.onnx \
+           https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx ; \
+    fi
 ENV PATH="/opt/venv/bin:$PATH"
+ENV MAYA_MODEL_DIR=/app/models
 
 WORKDIR /app
 COPY --from=backend /build/target/*.jar app.jar
 COPY backend/scripts ./scripts
 
-# U^2Net-p model for (optional) garment isolation — tiny (~4 MB) so it fits small hosts.
-# Full-quality models live in .tools/models for local development.
-RUN mkdir -p /app/models \
- && curl -L --fail -o /app/models/u2netp.onnx \
-      https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx
-ENV MAYA_MODEL_DIR=/app/models
-
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60", "-jar", "app.jar"]
