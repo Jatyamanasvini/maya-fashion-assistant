@@ -13,18 +13,16 @@ server:
   port: ${PORT:8080}
 
 spring:
-  # Self-contained file DB — no external database needed (data resets on redeploy).
+  # Works with either the built-in H2 file DB (default) or an external MySQL such as
+  # Aiven — set DATABASE_URL / DATABASE_USERNAME / DATABASE_PASSWORD to switch.
+  # The JDBC driver and Hibernate dialect are auto-detected from the URL.
   datasource:
     url: ${DATABASE_URL:jdbc:h2:file:./data/maya;MODE=MySQL;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}
     username: ${DATABASE_USERNAME:sa}
     password: ${DATABASE_PASSWORD:}
-    driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
 
 storage:
@@ -37,9 +35,11 @@ ai:
   provider: ${AI_PROVIDER:OPENAI}
   api-key: ${AI_API_KEY:}
   base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
-  model: ${AI_MODEL:gemini-3.5-flash-lite}
-  vision-model: ${AI_VISION_MODEL:gemini-3.5-flash-lite}
-  fallback-models: ${AI_FALLBACK_MODELS:gemini-3.1-flash-lite,gemini-3.6-flash,gemini-3.8-flash,gemini-3-flash-preview}
+  model: ${AI_MODEL:gemini-flash-lite-latest}
+  vision-model: ${AI_VISION_MODEL:gemini-flash-lite-latest}
+  fallback-models: ${AI_FALLBACK_MODELS:gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.8-flash}
+  # Gemini maps this to its "thinking" level; lower = much faster responses.
+  reasoning-effort: ${AI_REASONING_EFFORT:low}
   image-gen:
     provider: ${IMAGE_GENERATION_PROVIDER:POLLINATIONS}
 

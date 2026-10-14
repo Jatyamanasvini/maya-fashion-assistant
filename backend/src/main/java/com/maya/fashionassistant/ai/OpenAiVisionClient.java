@@ -24,16 +24,19 @@ public class OpenAiVisionClient implements VisionAiClient {
     private final ObjectMapper objectMapper;
     private final String apiKey;
     private final List<String> models;
+    private final String reasoningEffort;
 
     public OpenAiVisionClient(
             @Value("${ai.base-url:https://api.openai.com/v1}") String baseUrl,
             @Value("${ai.api-key:}") String apiKey,
             @Value("${ai.vision-model:gpt-4o-mini}") String model,
             @Value("${ai.fallback-models:}") String fallbackModels,
+            @Value("${ai.reasoning-effort:}") String reasoningEffort,
             ObjectMapper objectMapper) {
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
         this.models = AiModelCandidates.build(model, fallbackModels);
+        this.reasoningEffort = reasoningEffort;
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -87,6 +90,9 @@ public class OpenAiVisionClient implements VisionAiClient {
         requestBody.put("messages", List.of(systemMessage, userMessage));
         if (jsonMode) {
             requestBody.put("response_format", Map.of("type", "json_object"));
+        }
+        if (reasoningEffort != null && !reasoningEffort.isBlank()) {
+            requestBody.put("reasoning_effort", reasoningEffort);
         }
         requestBody.put("temperature", 0.2);
         requestBody.put("max_tokens", 900);

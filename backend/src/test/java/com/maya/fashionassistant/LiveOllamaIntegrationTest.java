@@ -70,7 +70,7 @@ class LiveOllamaIntegrationTest {
         intent.setStyle("cute");
         intent.setFormality("casual");
 
-        OpenAiChatClient client = new OpenAiChatClient(BASE_URL, "ollama", MODEL, "", MAPPER);
+        OpenAiChatClient client = new OpenAiChatClient(BASE_URL, "ollama", MODEL, "", "", MAPPER);
         OutfitSelectionResponse response = client.selectOutfit(wardrobe, intent, List.of());
 
         System.out.println("[live-ollama] chat selection: " + response);
@@ -89,7 +89,7 @@ class LiveOllamaIntegrationTest {
     void visionClient_ParsesImage_AgainstOllama() throws Exception {
         byte[] image = syntheticTopImage();
 
-        OpenAiVisionClient client = new OpenAiVisionClient(BASE_URL, "ollama", MODEL, "", MAPPER);
+        OpenAiVisionClient client = new OpenAiVisionClient(BASE_URL, "ollama", MODEL, "", "", MAPPER);
         VisionAnalysisResponse response = client.analyzeWardrobePhoto(image, "image/png");
 
         System.out.println("[live-ollama] vision response: "
