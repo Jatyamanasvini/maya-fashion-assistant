@@ -1,6 +1,9 @@
 # ============================================================
 # MAYA segmentation microservice — garment cutouts on white.
 #
+# Everything it needs is at the REPO ROOT, so the default build context (repo root)
+# always contains it.
+#
 # Render settings for this service:
 #   Root Directory  = (leave empty)
 #   Dockerfile Path = Dockerfile.segmenter
@@ -13,11 +16,11 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/*
 
-COPY segmentation-service/requirements.txt ./requirements.txt
+COPY segmenter_requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY segmentation-service/crop_item.py ./crop_item.py
-COPY segmentation-service/app.py ./app.py
+COPY segmenter_crop.py ./crop_item.py
+COPY segmenter_app.py ./app.py
 
 # Tiny U^2Net-p model (~4 MB) so the whole service stays well under 512 MB
 RUN mkdir -p /app/models \
