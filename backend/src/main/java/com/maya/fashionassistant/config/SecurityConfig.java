@@ -58,6 +58,7 @@ public class SecurityConfig {
                         // (the app shell contains no user data; data lives behind /api/**).
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/diagnostics/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api-docs/**",
