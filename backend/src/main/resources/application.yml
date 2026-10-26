@@ -52,6 +52,12 @@ weather:
   default-lat: ${WEATHER_DEFAULT_LAT:40.7128}
   default-lon: ${WEATHER_DEFAULT_LON:-74.0060}
 
+maya:
+  segmentation:
+    # Local Python segmentation stays off on small hosts; cutouts go to the microservice.
+    enabled: ${MAYA_SEGMENTATION_ENABLED:false}
+    remote-url: ${MAYA_SEGMENTATION_REMOTE_URL:https://maya-segmenter-jatyamanasvini.onrender.com}
+
 springdoc:
   api-docs:
     path: /api-docs

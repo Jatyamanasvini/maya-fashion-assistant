@@ -3,8 +3,10 @@ package com.maya.fashionassistant.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,17 +15,19 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Public diagnostics for deployment troubleshooting. Reports the active AI configuration
- * (with the key masked) and probes each candidate model with a tiny request so the exact
- * provider error is visible in a browser — no log hunting required.
+ * Public diagnostics for deployment troubleshooting. Reports the active configuration
+ * (with secrets masked) and can probe the AI provider and the segmentation service so the
+ * exact remote error is visible in a browser — no log hunting required.
  *
- * <p>It never returns the API key. Disable/secure this endpoint for a real production app.</p>
+ * <p>It never returns the API key. Disable/secure these endpoints for a real production app.</p>
  */
 @RestController
 @RequestMapping("/api/diagnostics")
@@ -32,6 +36,8 @@ public class DiagnosticsController {
     private static final Logger log = LoggerFactory.getLogger(DiagnosticsController.class);
 
     private final RestClient restClient;
+    private final RestClient segmentationClient;
+    private final Environment environment;
     private final String baseUrl;
     private final String apiKey;
     private final String provider;
@@ -42,6 +48,7 @@ public class DiagnosticsController {
     private final String segmentationRemoteUrl;
 
     public DiagnosticsController(
+            Environment environment,
             @Value("${ai.base-url:https://api.openai.com/v1}") String baseUrl,
             @Value("${ai.api-key:}") String apiKey,
             @Value("${ai.provider:MOCK}") String provider,
@@ -50,6 +57,7 @@ public class DiagnosticsController {
             @Value("${ai.fallback-models:}") String fallbackModels,
             @Value("${maya.segmentation.enabled:true}") boolean segmentationEnabled,
             @Value("${maya.segmentation.remote-url:}") String segmentationRemoteUrl) {
+        this.environment = environment;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.provider = provider;
@@ -58,10 +66,67 @@ public class DiagnosticsController {
         this.fallbackModels = fallbackModels;
         this.segmentationEnabled = segmentationEnabled;
         this.segmentationRemoteUrl = segmentationRemoteUrl;
+
+        // Bounded timeouts: an unreachable provider must never hang the whole request.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofSeconds(30));
         this.restClient = RestClient.builder()
+                .requestFactory(factory)
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
+        this.segmentationClient = RestClient.builder()
+                .requestFactory(factory)
+                .build();
+    }
+
+    /** Quick, AI-free view of the running configuration (handy to confirm a deploy went live). */
+    @GetMapping("/build")
+    public Map<String, Object> build() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("app", "maya-fashion-assistant");
+        out.put("profiles", String.join(",", environment.getActiveProfiles()));
+        out.put("segmentationEnabled", segmentationEnabled);
+        out.put("segmentationRemote", StringUtils.hasText(segmentationRemoteUrl) ? segmentationRemoteUrl : null);
+        out.put("aiProvider", provider);
+        out.put("chatModel", chatModel);
+        out.put("visionModel", visionModel);
+        out.put("apiKeyPresent", StringUtils.hasText(apiKey));
+        out.put("time", Instant.now().toString());
+        return out;
+    }
+
+    /** Live probe of the cutout service: proves the app can actually reach it. */
+    @GetMapping("/segmentation")
+    public Map<String, Object> segmentation() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("remoteUrl", StringUtils.hasText(segmentationRemoteUrl) ? segmentationRemoteUrl : null);
+        if (!StringUtils.hasText(segmentationRemoteUrl)) {
+            out.put("ok", false);
+            out.put("error", "MAYA_SEGMENTATION_REMOTE_URL is not configured");
+            return out;
+        }
+        String base = segmentationRemoteUrl.startsWith("http")
+                ? segmentationRemoteUrl
+                : "https://" + segmentationRemoteUrl;
+        base = base.replaceAll("/+$", "");
+        try {
+            String body = segmentationClient.get()
+                    .uri(base + "/health")
+                    .retrieve()
+                    .body(String.class);
+            out.put("ok", true);
+            out.put("health", body);
+        } catch (RestClientResponseException e) {
+            out.put("ok", false);
+            out.put("status", e.getStatusCode().value());
+            out.put("error", truncate(e.getResponseBodyAsString(), 500));
+        } catch (Exception e) {
+            out.put("ok", false);
+            out.put("error", e.getMessage());
+        }
+        return out;
     }
 
     @GetMapping("/ai")

@@ -52,7 +52,9 @@ weather:
 maya:
   segmentation:
     enabled: ${MAYA_SEGMENTATION_ENABLED:false}
-    remote-url: ${MAYA_SEGMENTATION_REMOTE_URL:}
+    # Defaults to the deployed cutout microservice so production works even if the env var
+    # was never added to the service. Override (or set empty) via MAYA_SEGMENTATION_REMOTE_URL.
+    remote-url: ${MAYA_SEGMENTATION_REMOTE_URL:https://maya-segmenter-jatyamanasvini.onrender.com}
     python: ${MAYA_PYTHON:python3}
     script: ${MAYA_SEG_SCRIPT:scripts/crop_item.py}
 
