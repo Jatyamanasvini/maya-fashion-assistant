@@ -46,6 +46,7 @@ public class DiagnosticsController {
     private final String fallbackModels;
     private final boolean segmentationEnabled;
     private final String segmentationRemoteUrl;
+    private final String datasourceUrl;
 
     public DiagnosticsController(
             Environment environment,
@@ -56,8 +57,10 @@ public class DiagnosticsController {
             @Value("${ai.vision-model:gpt-4o-mini}") String visionModel,
             @Value("${ai.fallback-models:}") String fallbackModels,
             @Value("${maya.segmentation.enabled:true}") boolean segmentationEnabled,
-            @Value("${maya.segmentation.remote-url:}") String segmentationRemoteUrl) {
+            @Value("${maya.segmentation.remote-url:}") String segmentationRemoteUrl,
+            @Value("${spring.datasource.url:}") String datasourceUrl) {
         this.environment = environment;
+        this.datasourceUrl = datasourceUrl;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.provider = provider;
@@ -93,6 +96,7 @@ public class DiagnosticsController {
         out.put("chatModel", chatModel);
         out.put("visionModel", visionModel);
         out.put("apiKeyPresent", StringUtils.hasText(apiKey));
+        out.put("database", describeDatabase());
         out.put("time", Instant.now().toString());
         return out;
     }
@@ -201,5 +205,25 @@ public class DiagnosticsController {
     private String truncate(String value, int max) {
         if (value == null) return null;
         return value.length() <= max ? value : value.substring(0, max) + "…";
+    }
+
+    /** Human-readable database target with credentials masked (never exposes a password). */
+    private String describeDatabase() {
+        if (!StringUtils.hasText(datasourceUrl)) {
+            return "unknown";
+        }
+        String masked = datasourceUrl.replaceAll("//[^/@]+@", "//***@");
+        String lower = datasourceUrl.toLowerCase();
+        String type;
+        if (lower.startsWith("jdbc:h2")) {
+            type = "H2 (EPHEMERAL — wiped on restart)";
+        } else if (lower.startsWith("jdbc:mysql")) {
+            type = "MySQL (persistent)";
+        } else if (lower.startsWith("jdbc:postgresql")) {
+            type = "PostgreSQL (persistent)";
+        } else {
+            type = "other";
+        }
+        return type + " | " + masked;
     }
 }

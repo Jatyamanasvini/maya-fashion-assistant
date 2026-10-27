@@ -3,6 +3,8 @@ package com.maya.fashionassistant.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -70,15 +72,38 @@ public class ItemImageService {
         this.pythonExecutable = pythonExecutable;
         this.scriptPath = scriptPath;
 
-        // Free hosting sleeps, so cold starts are slow: be generous, but bounded.
+        // Free hosting sleeps, so cold starts are slow (25s+ to wake): be generous, but bounded.
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(30));
+        factory.setConnectTimeout(Duration.ofSeconds(45));
         factory.setReadTimeout(Duration.ofSeconds(120));
         this.restClient = RestClient.builder().requestFactory(factory).build();
         log.info("Item image service: remote segmentation {} (url={}), local python {}",
                 StringUtils.hasText(remoteUrl) ? "ENABLED" : "disabled",
                 StringUtils.hasText(remoteUrl) ? remoteUrl : "-",
                 enabled ? "enabled" : "disabled");
+    }
+
+    /**
+     * Wake the (free-tier, auto-sleeping) segmentation service as soon as the app is ready,
+     * so the first user upload does not pay the 25s+ cold-start cost inside its request.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void warmUpSegmentation() {
+        if (!StringUtils.hasText(remoteUrl)) {
+            return;
+        }
+        Thread t = new Thread(() -> {
+            String base = remoteUrl.startsWith("http") ? remoteUrl : "https://" + remoteUrl;
+            base = base.replaceAll("/+$", "");
+            try {
+                restClient.get().uri(base + "/health").retrieve().body(String.class);
+                log.info("Segmentation service warm-up complete");
+            } catch (Exception e) {
+                log.warn("Segmentation service warm-up failed: {}", e.getMessage());
+            }
+        }, "segmentation-warmup");
+        t.setDaemon(true);
+        t.start();
     }
 
     public String createItemImage(String sourceStoragePath, List<Double> bbox, String category) {
